@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AuditOS Dashboard - Online</title>
+    <title>Audit System - Login</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,11 +13,9 @@
     
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Hide scrollbar for sidebar but allow scroll */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Modal Animation */
         @keyframes modalFadeIn {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
@@ -27,7 +25,6 @@
         }
     </style>
 
-    <!-- Import Map untuk mengatur dependensi eksternal -->
     <script type="importmap">
     {
         "imports": {
@@ -41,7 +38,6 @@
     }
     </script>
 
-    <!-- Babel untuk compile JSX di browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden">
@@ -56,16 +52,17 @@
             FolderPlus, FileText, User, MapPin, Save, ArrowLeft, LayoutGrid, List, 
             BarChart3, TrendingUp, Activity, Filter, ExternalLink, RefreshCw, Sparkles, 
             Loader2, X, Zap, Cloud, Database, CalendarRange, Download, Upload,
-            Layout, Users, PieChart, Settings, LogOut, Menu, Target, Clock, CheckSquare, Square, AlertTriangle, Check, Link as LinkIcon, FileCheck, Timer, Send
+            Layout, Users, PieChart, Settings, LogOut, Menu, Target, Clock, CheckSquare, Square, AlertTriangle, Check, Link as LinkIcon, FileCheck, Timer, Send, Lock
         } from 'lucide-react';
 
         // --- FIREBASE IMPORTS ---
         import { initializeApp } from 'firebase/app';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+        // Menggunakan Auth Email/Password menggantikan Anonymous
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
         import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
 
         // =========================================================================
-        // --- 1. PASTE CONFIG FIREBASE ANDA DI SINI (GANTI ISI DI BAWAH INI) ---
+        // --- KONFIGURASI FIREBASE (Dari Kode Anda) ---
         // =========================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCUHUzzVlUb6TJeybRF-BPVlZhpD51yFOo",
@@ -78,7 +75,6 @@
         };
         // =========================================================================
 
-        // --- DATA DEFAULT (TEMPLATE) ---
         const DEFAULT_PROGRAMS = [
             {
                 id: 1,
@@ -108,12 +104,118 @@
             { id: 8, projectName: 'Audit Operasional MSJ-TDM', site: 'MSJ', planStart: '2024-11-01', completed: false, evidence: '' },
         ];
 
+        // --- KOMPONEN LOGIN SCREEN ---
+        const LoginScreen = () => {
+            const [isRegister, setIsRegister] = useState(false);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+                const auth = getAuth();
+
+                try {
+                    if (isRegister) {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } else {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    }
+                } catch (err) {
+                    let msg = err.message;
+                    if (msg.includes('auth/invalid-email')) msg = "Format email salah.";
+                    if (msg.includes('auth/user-not-found') || msg.includes('auth/invalid-credential')) msg = "Email atau password salah.";
+                    if (msg.includes('auth/wrong-password')) msg = "Password salah.";
+                    if (msg.includes('auth/email-already-in-use')) msg = "Email sudah terdaftar.";
+                    if (msg.includes('auth/weak-password')) msg = "Password terlalu lemah (min 6 karakter).";
+                    setError(msg);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
+                        <div className="flex justify-center mb-6">
+                            {/* LOGO AREA */}
+                            <div className="h-24 w-auto flex items-center justify-center">
+                                <img 
+                                    src="logo.jpg" 
+                                    alt="Logo Perusahaan" 
+                                    className="max-h-full max-w-full object-contain"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.parentNode.innerHTML = '<div class="p-3 bg-blue-100 rounded-xl"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="text-xs text-red-500 mt-2 absolute -bottom-6 w-full text-center">Simpan gambar sebagai logo.jpg</div>';
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">Audit System</h2>
+                        <p className="text-center text-slate-500 mb-8 text-sm">
+                            {isRegister ? "Buat akun baru untuk memulai" : "Masuk untuk mengakses dashboard"}
+                        </p>
+
+                        <form onSubmit={handleAuth} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                                <input 
+                                    type="email" 
+                                    required 
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                                    placeholder="nama@perusahaan.com"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="bg-rose-50 text-rose-600 p-3 rounded-lg text-sm flex items-center gap-2">
+                                    <AlertCircle size={16} /> {error}
+                                </div>
+                            )}
+
+                            <button 
+                                type="submit" 
+                                disabled={loading}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition flex justify-center items-center gap-2"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : (isRegister ? 'Daftar Akun' : 'Masuk')}
+                            </button>
+                        </form>
+
+                        <div className="mt-6 text-center text-sm">
+                            <span className="text-slate-500">{isRegister ? "Sudah punya akun?" : "Belum punya akun?"}</span>
+                            <button 
+                                onClick={() => { setIsRegister(!isRegister); setError(''); }}
+                                className="ml-1 text-blue-600 font-bold hover:underline"
+                            >
+                                {isRegister ? "Login di sini" : "Daftar sekarang"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const AuditApp = () => {
-            // --- MENU & LAYOUT STATE ---
+            // --- STATE MANAGEMENT ---
             const [activeMenu, setActiveMenu] = useState('audit'); 
             const [isSidebarOpen, setSidebarOpen] = useState(true);
-
-            // --- EXISTING STATE ---
             const [view, setView] = useState('dashboard'); 
             const [dashboardLayout, setDashboardLayout] = useState('grid');
             const GLOBAL_CUT_OFF = '2099-12-31'; 
@@ -123,26 +225,20 @@
             const [isSaving, setIsSaving] = useState(false);
             const [isDataLoaded, setIsDataLoaded] = useState(false); 
             const [legacyDataFound, setLegacyDataFound] = useState(null);
-
-            // --- LEAD TIME STATE ---
             const [inputLinks, setInputLinks] = useState({}); 
-
-            // --- CONFIRMATION MODAL STATE ---
             const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, payload: null, title: '', message: '', confirmLabel: '' });
-
-            // --- AI STATE ---
             const [showAIModal, setShowAIModal] = useState(false);
             const [aiTopic, setAiTopic] = useState('');
             const [isGenerating, setIsGenerating] = useState(false);
-            const apiKey = ""; // Keep empty for client side unless using proxy
+            const apiKey = ""; 
 
-            // --- UPLOAD STATE ---
             const [uploadRowId, setUploadRowId] = useState(null);
             const rowFileInputRef = useRef(null);
             const programFileInputRef = useRef(null); 
 
             // Auth State
             const [user, setUser] = useState(null);
+            const [authInitialized, setAuthInitialized] = useState(false);
             const fileInputRef = useRef(null); 
 
             const picOptions = ['Habibie', 'Josua', 'Farhan', 'Majid', 'Rangga', 'Tika'];
@@ -160,43 +256,37 @@
             // --- FIREBASE INIT & AUTH ---
             useEffect(() => {
                 try {
-                    // Cek apakah config sudah diisi user
-                    if (firebaseConfig.apiKey === "GANTI_DENGAN_API_KEY_ANDA") {
-                        console.warn("Firebase Config belum diisi!");
-                        // Load data default agar tampilan tidak rusak saat preview
-                        setIsDataLoaded(true);
-                        return;
-                    }
-
                     const app = initializeApp(firebaseConfig);
                     const auth = getAuth(app);
                     
-                    // Login Anonymously (Tanpa Password) agar mudah akses
-                    signInAnonymously(auth).catch(err => console.error("Auth Error:", err));
-                    
-                    const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); });
+                    const unsubscribe = onAuthStateChanged(auth, (u) => { 
+                        setUser(u); 
+                        setAuthInitialized(true); 
+                    });
                     return () => unsubscribe();
                 } catch (err) {
                     console.error("Firebase Init Error:", err);
-                    setIsDataLoaded(true);
+                    setAuthInitialized(true);
                 }
             }, []);
+
+            // --- LOGOUT HANDLER ---
+            const handleLogout = async () => {
+                const auth = getAuth();
+                try { await signOut(auth); } catch (error) { console.error("Error signing out: ", error); }
+            };
 
             // --- DATA SYNC (REALTIME) ---
             useEffect(() => {
                 if (!user) return;
                 try {
                     const db = getFirestore();
-                    
-                    // --- MODIFIKASI PENTING UNTUK SHARE ---
-                    // Menggunakan 'shared_board' agar semua user melihat data yang SAMA
                     const docRef = doc(db, 'audit_data', 'shared_board');
 
                     const unsubscribe = onSnapshot(docRef, (docSnap) => {
                         if (docSnap.exists()) {
                             const data = docSnap.data();
                             if (data.programs && Array.isArray(data.programs)) {
-                                // Update jika ada perbedaan (mencegah loop)
                                 if (JSON.stringify(data.programs) !== JSON.stringify(programsRef.current)) {
                                     setPrograms(data.programs);
                                 }
@@ -208,7 +298,6 @@
                             }
                             setIsDataLoaded(true); 
                         } else {
-                            // Jika data belum ada di cloud, buat baru dari template
                             setDoc(docRef, { 
                                 programs: DEFAULT_PROGRAMS,
                                 accuracyData: DEFAULT_ACCURACY_DATA,
@@ -236,7 +325,6 @@
                     setIsSaving(true);
                     try {
                         const db = getFirestore();
-                        // Simpan ke 'shared_board' yang sama
                         const docRef = doc(db, 'audit_data', 'shared_board');
                         await setDoc(docRef, { programs: programs, accuracyData: accuracyData }, { merge: true });
                         setTimeout(() => setIsSaving(false), 1000);
@@ -245,7 +333,6 @@
                         setIsSaving(false);
                     }
                 };
-                // Debounce save (tunggu 3 detik setelah ketik baru simpan)
                 const timeoutId = setTimeout(() => { saveData(); }, 3000);
                 return () => clearTimeout(timeoutId);
             }, [programs, accuracyData, user, isDataLoaded]);
@@ -325,14 +412,13 @@
                 return { plannedDays: totalPlannedDays, actualDays: totalActualDays, achievement: achievement, overdueCount };
             };
 
-            // --- CONFIRMATION HANDLER ---
+            // --- EVENT HANDLERS ---
             const triggerConfirm = (type, payload, title, message, confirmLabel = 'Ya, Lanjutkan') => {
                 setConfirmModal({ isOpen: true, type, payload, title, message, confirmLabel });
             };
 
             const handleConfirmAction = () => {
                 const { type, payload } = confirmModal;
-                
                 if (type === 'delete_accuracy_row') {
                     setAccuracyData(prev => prev.filter(item => item.id !== payload.id));
                 } else if (type === 'delete_program') {
@@ -349,11 +435,9 @@
                     if (payload.imported.programs) setPrograms(payload.imported.programs);
                     if (payload.imported.accuracyData) setAccuracyData(payload.imported.accuracyData);
                 }
-
                 setConfirmModal({ isOpen: false, type: null, payload: null, title: '', message: '', confirmLabel: '' });
             };
 
-            // --- ROW FILE UPLOAD HANDLERS (Accuracy Module) ---
             const handleRowUploadClick = (id) => {
                 setUploadRowId(id);
                 if(rowFileInputRef.current) {
@@ -376,7 +460,6 @@
                 e.target.value = null; // Reset input
             };
 
-            // --- PROGRAM FILE UPLOAD HANDLER (Audit Module) ---
             const handleProgramFileChange = (e) => {
                 if (e.target.files && e.target.files[0] && currentProgramId) {
                     const file = e.target.files[0];
@@ -391,7 +474,6 @@
                 e.target.value = null; // Reset
             };
 
-            // --- LEAD TIME HANDLERS ---
             const handleClosingDateChange = (progId, newDate) => {
                 const updated = programs.map(p => {
                     if(p.id === progId) {
@@ -431,7 +513,6 @@
                 setPrograms(updated);
             };
 
-            // --- GLOBAL HANDLERS ---
             const handleSave = async () => {
                 if (!user) return;
                 setIsSaving(true);
@@ -490,15 +571,11 @@
             const handleCreateProgram = () => {
                 const newId = Date.now();
                 const today = new Date().toISOString().split('T')[0];
-                
-                // Helper to add days
                 const addDays = (dateStr, days) => {
                     const date = new Date(dateStr);
                     date.setDate(date.getDate() + days);
                     return date.toISOString().split('T')[0];
                 };
-
-                // Generate 5 default activities with sequential dates
                 const activities = [
                     { id: Date.now() + 1, activity: 'Desk Audit', start: today, end: addDays(today, 4), actualStart: '', actualEnd: '', actualDays: 0, link: '' },
                     { id: Date.now() + 2, activity: 'Opening Meeting', start: addDays(today, 5), end: addDays(today, 5), actualStart: '', actualEnd: '', actualDays: 0, link: '' },
@@ -506,7 +583,6 @@
                     { id: Date.now() + 4, activity: 'Closing Meeting', start: addDays(today, 16), end: addDays(today, 16), actualStart: '', actualEnd: '', actualDays: 0, link: '' },
                     { id: Date.now() + 5, activity: 'Submit LHA', start: addDays(today, 17), end: addDays(today, 19), actualStart: '', actualEnd: '', actualDays: 0, link: '' }
                 ];
-
                 const newProgram = {
                     id: newId, 
                     title: `New Audit Program ${programs.length + 1}`, 
@@ -515,10 +591,8 @@
                     docLink: '',
                     activities: activities
                 };
-
                 setPrograms(prev => [newProgram, ...prev]);
                 setCurrentProgramId(newId);
-                
                 setView('detail'); 
             };
 
@@ -533,10 +607,7 @@
                 setShowAIModal(false);
             };
 
-            // =================================================================
-            // VIEW RENDER FUNCTIONS
-            // =================================================================
-
+            // --- VIEW RENDERERS ---
             const renderSettingsModule = () => {
                 return (
                     <div className="max-w-4xl mx-auto pt-6 px-6">
@@ -546,12 +617,14 @@
                                 <Settings className="text-slate-400" size={40} />
                             </div>
                             <h3 className="text-xl font-bold text-slate-800 mb-2">Application Settings</h3>
-                            <p className="text-slate-500 max-w-md mx-auto mb-6">Versi ini menggunakan "Shared Board". Semua orang melihat data yang sama.</p>
+                            <p className="text-slate-500 max-w-md mx-auto mb-6">Versi ini menggunakan "Shared Board". Semua user melihat data yang sama.</p>
                             <div className="bg-slate-100 p-4 rounded text-xs font-mono text-left mb-4">
-                                Config Status: {firebaseConfig.apiKey.includes("GANTI") ? "BELUM DIISI" : "OK (Connected to " + firebaseConfig.projectId + ")"} <br/>
-                                Auth Status: {user ? "Online (Anonymous)" : "Connecting..."} <br/>
+                                Auth Status: {user ? "Logged In (" + user.email + ")" : "Not Logged In"} <br/>
                                 Storage Mode: Shared Cloud (Firestore)
                             </div>
+                            <button onClick={handleLogout} className="bg-rose-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-rose-700 flex items-center gap-2 mx-auto">
+                                <LogOut size={18}/> Log Out
+                            </button>
                         </div>
                     </div>
                 )
@@ -562,7 +635,6 @@
                     <div className="max-w-7xl mx-auto pt-6 px-6 pb-20">
                         <h1 className="text-3xl font-bold text-slate-800 mb-2">Lead Time Audit Report</h1>
                         <p className="text-slate-500 mb-8">Pemantauan durasi penyelesaian laporan audit dari Closing Meeting.</p>
-
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">
@@ -580,103 +652,32 @@
                                         {programs.map(prog => {
                                             const closingActivity = prog.activities.find(a => a.activity === 'Closing Meeting') || {};
                                             const closingDate = closingActivity.actualEnd || closingActivity.end || '';
-                                            
-                                            // Calculate lead time and achievement
                                             let leadTimeDisplay = '-';
                                             let achievement = 0;
-
                                             if (closingDate && prog.finalReport?.submittedAt) {
                                                 const start = new Date(closingDate);
                                                 const end = new Date(prog.finalReport.submittedAt);
                                                 const diffTime = Math.abs(end - start);
                                                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
                                                 leadTimeDisplay = diffDays + " Days";
-
-                                                // Achievement Logic
                                                 const target = 5;
-                                                if (diffDays <= target) {
-                                                    achievement = 100;
-                                                } else {
-                                                    achievement = (target / diffDays) * 100;
-                                                }
+                                                achievement = diffDays <= target ? 100 : (target / diffDays) * 100;
                                             }
-
                                             return (
                                                 <tr key={prog.id} className="hover:bg-slate-50">
                                                     <td className="px-6 py-4 font-bold text-slate-800">
                                                         {prog.title}
-                                                        <div className="text-xs font-normal text-slate-500 mt-1 flex gap-2">
-                                                            <span className="bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100">{prog.site}</span>
-                                                            <span className="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">{prog.pic}</span>
-                                                        </div>
+                                                        <div className="text-xs font-normal text-slate-500 mt-1 flex gap-2"><span className="bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100">{prog.site}</span><span className="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">{prog.pic}</span></div>
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] text-slate-400 font-bold mb-1">TANGGAL CLOSING</span>
-                                                            <input 
-                                                                type="date" 
-                                                                value={closingDate}
-                                                                onChange={(e) => handleClosingDateChange(prog.id, e.target.value)}
-                                                                className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-700 bg-white focus:border-blue-500 outline-none"
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {!prog.finalReport ? (
-                                                            <div className="flex flex-col gap-2">
-                                                                <input 
-                                                                    type="text" 
-                                                                    placeholder="Paste Link LHA..."
-                                                                    value={inputLinks[prog.id] || ''}
-                                                                    onChange={(e) => handleLinkInputChange(prog.id, e.target.value)}
-                                                                    className="border border-slate-300 rounded px-2 py-1 text-xs w-full focus:border-blue-500 outline-none"
-                                                                />
-                                                                <button 
-                                                                    onClick={() => handleSubmitReport(prog.id)}
-                                                                    className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-700 transition flex items-center justify-center gap-1"
-                                                                >
-                                                                    <Send size={12} /> Submit
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="text-sm text-slate-500 italic">Report Submitted</div>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {prog.finalReport ? (
-                                                            <div className="flex flex-col gap-1">
-                                                                <a href={prog.finalReport.link} target="_blank" className="text-blue-600 hover:underline font-medium text-xs flex items-center gap-1">
-                                                                    <LinkIcon size={12}/> Buka Laporan
-                                                                </a>
-                                                                <div className="text-[10px] text-slate-400">
-                                                                    System Date: <br/>
-                                                                    <span className="font-mono text-slate-600">{formatDateSystem(prog.finalReport.submittedAt)}</span>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-slate-400 text-xs">-</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <div className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${leadTimeDisplay !== '-' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
-                                                            {leadTimeDisplay}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center border-l border-slate-100">
-                                                        {leadTimeDisplay !== '-' ? (
-                                                            <span className={`text-sm font-bold ${achievement >= 100 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                                {fmt(achievement)}%
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-slate-400 text-xs">-</span>
-                                                        )}
-                                                    </td>
+                                                    <td className="px-6 py-4"><div className="flex flex-col"><span className="text-[10px] text-slate-400 font-bold mb-1">TANGGAL CLOSING</span><input type="date" value={closingDate} onChange={(e) => handleClosingDateChange(prog.id, e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-sm text-slate-700 bg-white focus:border-blue-500 outline-none"/></div></td>
+                                                    <td className="px-6 py-4">{!prog.finalReport ? (<div className="flex flex-col gap-2"><input type="text" placeholder="Paste Link LHA..." value={inputLinks[prog.id] || ''} onChange={(e) => handleLinkInputChange(prog.id, e.target.value)} className="border border-slate-300 rounded px-2 py-1 text-xs w-full focus:border-blue-500 outline-none"/><button onClick={() => handleSubmitReport(prog.id)} className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-700 transition flex items-center justify-center gap-1"><Send size={12} /> Submit</button></div>) : (<div className="text-sm text-slate-500 italic">Report Submitted</div>)}</td>
+                                                    <td className="px-6 py-4">{prog.finalReport ? (<div className="flex flex-col gap-1"><a href={prog.finalReport.link} target="_blank" className="text-blue-600 hover:underline font-medium text-xs flex items-center gap-1"><LinkIcon size={12}/> Buka Laporan</a><div className="text-[10px] text-slate-400">System Date: <br/><span className="font-mono text-slate-600">{formatDateSystem(prog.finalReport.submittedAt)}</span></div></div>) : (<span className="text-slate-400 text-xs">-</span>)}</td>
+                                                    <td className="px-6 py-4 text-center"><div className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${leadTimeDisplay !== '-' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>{leadTimeDisplay}</div></td>
+                                                    <td className="px-6 py-4 text-center border-l border-slate-100">{leadTimeDisplay !== '-' ? (<span className={`text-sm font-bold ${achievement >= 100 ? 'text-emerald-600' : 'text-rose-600'}`}>{fmt(achievement)}%</span>) : (<span className="text-slate-400 text-xs">-</span>)}</td>
                                                 </tr>
                                             );
                                         })}
-                                        {programs.length === 0 && (
-                                            <tr><td colSpan={6} className="text-center py-8 text-slate-400">Belum ada data program audit.</td></tr>
-                                        )}
+                                        {programs.length === 0 && (<tr><td colSpan={6} className="text-center py-8 text-slate-400">Belum ada data program audit.</td></tr>)}
                                     </tbody>
                                 </table>
                             </div>
@@ -688,47 +689,26 @@
             const renderAnalyticsModule = () => {
                 const picStats = {};
                 let totalProjects = 0;
-
                 programs.forEach(p => {
                     totalProjects++;
                     if(!picStats[p.pic]) picStats[p.pic] = { count: 0, active: 0 };
                     picStats[p.pic].count++;
                 });
-
                 return (
                     <div className="max-w-6xl mx-auto pt-6 px-6 pb-20">
                         <h1 className="text-3xl font-bold text-slate-800 mb-2">Team Analytics</h1>
                         <p className="text-slate-500 mb-8">Overview of team workload and audit distribution.</p>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                                <div className="p-3 bg-blue-100 text-blue-600 rounded-lg"><FolderPlus size={24}/></div>
-                                <div><div className="text-2xl font-bold text-slate-800">{totalProjects}</div><div className="text-sm text-slate-500">Total Programs</div></div>
-                            </div>
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                                <div className="p-3 bg-indigo-100 text-indigo-600 rounded-lg"><Users size={24}/></div>
-                                <div><div className="text-2xl font-bold text-slate-800">{Object.keys(picStats).length}</div><div className="text-sm text-slate-500">Active PICs</div></div>
-                            </div>
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                                <div className="p-3 bg-purple-100 text-purple-600 rounded-lg"><Activity size={24}/></div>
-                                <div><div className="text-2xl font-bold text-slate-800">{programs.reduce((acc, p) => acc + p.activities.length, 0)}</div><div className="text-sm text-slate-500">Total Activities</div></div>
-                            </div>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4"><div className="p-3 bg-blue-100 text-blue-600 rounded-lg"><FolderPlus size={24}/></div><div><div className="text-2xl font-bold text-slate-800">{totalProjects}</div><div className="text-sm text-slate-500">Total Programs</div></div></div>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4"><div className="p-3 bg-indigo-100 text-indigo-600 rounded-lg"><Users size={24}/></div><div><div className="text-2xl font-bold text-slate-800">{Object.keys(picStats).length}</div><div className="text-sm text-slate-500">Active PICs</div></div></div>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4"><div className="p-3 bg-purple-100 text-purple-600 rounded-lg"><Activity size={24}/></div><div><div className="text-2xl font-bold text-slate-800">{programs.reduce((acc, p) => acc + p.activities.length, 0)}</div><div className="text-sm text-slate-500">Total Activities</div></div></div>
                         </div>
-
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
                                 <h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><User size={18}/> Project Distribution by PIC</h3>
                                 <div className="space-y-4">
                                     {Object.entries(picStats).map(([name, stat]) => (
-                                        <div key={name}>
-                                            <div className="flex justify-between text-sm mb-1">
-                                                <span className="font-medium text-slate-700">{name}</span>
-                                                <span className="text-slate-500">{stat.count} Projects</span>
-                                            </div>
-                                            <div className="w-full bg-slate-100 rounded-full h-2.5">
-                                                <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${(stat.count / totalProjects) * 100}%` }}></div>
-                                            </div>
-                                        </div>
+                                        <div key={name}><div className="flex justify-between text-sm mb-1"><span className="font-medium text-slate-700">{name}</span><span className="text-slate-500">{stat.count} Projects</span></div><div className="w-full bg-slate-100 rounded-full h-2.5"><div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${(stat.count / totalProjects) * 100}%` }}></div></div></div>
                                     ))}
                                 </div>
                             </div>
@@ -739,38 +719,18 @@
 
             const renderAccuracyModule = () => {
                 const handleAccuracyChange = (id, field, value) => {
-                    const updated = accuracyData.map(item => {
-                        if (item.id === id) {
-                            return { ...item, [field]: value };
-                        }
-                        return item;
-                    });
+                    const updated = accuracyData.map(item => { if (item.id === id) return { ...item, [field]: value }; return item; });
                     setAccuracyData(updated);
                 };
-
                 const addAccuracyRow = (initialDate = '2024-01-01') => {
-                    const newRow = { 
-                        id: Date.now(), 
-                        projectName: '', 
-                        site: 'AGM', 
-                        planStart: initialDate, 
-                        completed: false,
-                        evidence: ''
-                    };
+                    const newRow = { id: Date.now(), projectName: '', site: 'AGM', planStart: initialDate, completed: false, evidence: '' };
                     setAccuracyData(prev => [...prev, newRow]);
                 };
-
-                const deleteAccuracyRow = (id) => {
-                    // Langsung hapus tanpa konfirmasi untuk mempercepat proses input
-                    setAccuracyData(prev => prev.filter(item => item.id !== id));
-                };
-
+                const deleteAccuracyRow = (id) => { setAccuracyData(prev => prev.filter(item => item.id !== id)); };
                 const sortedData = [...accuracyData].sort((a, b) => {
-                    if (!a.planStart) return 1;
-                    if (!b.planStart) return -1;
+                    if (!a.planStart) return 1; if (!b.planStart) return -1;
                     return new Date(a.planStart) - new Date(b.planStart);
                 });
-
                 const groupedData = sortedData.reduce((acc, item) => {
                     const date = item.planStart ? new Date(item.planStart) : null;
                     const monthKey = date ? date.toLocaleString('id-ID', { month: 'long' }) : 'Belum Dijadwalkan';
@@ -778,159 +738,50 @@
                     acc[monthKey].push(item);
                     return acc;
                 }, {});
-
                 const groups = Object.entries(groupedData);
 
                 return (
                     <div className="max-w-7xl mx-auto pt-6 px-6 pb-20">
-                        {/* Hidden Input for Row-based File Upload */}
-                        <input 
-                            type="file" 
-                            ref={rowFileInputRef}
-                            className="hidden"
-                            onChange={handleRowFileChange}
-                        />
-
+                        <input type="file" ref={rowFileInputRef} className="hidden" onChange={handleRowFileChange}/>
                         <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h1 className="text-3xl font-bold text-slate-800 mb-2">Akurasi Project Audit</h1>
-                                <p className="text-slate-500">Achievement dihitung dari realisasi jumlah project per bulan.</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 ${isSaving ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                    {isSaving ? <><RefreshCw size={12} className="animate-spin"/> Saving...</> : <><Cloud size={12}/> Saved</>}
-                                </div>
-                            </div>
+                            <div><h1 className="text-3xl font-bold text-slate-800 mb-2">Akurasi Project Audit</h1><p className="text-slate-500">Achievement dihitung dari realisasi jumlah project per bulan.</p></div>
+                            <div className="flex items-center gap-3"><div className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 ${isSaving ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>{isSaving ? <><RefreshCw size={12} className="animate-spin"/> Saving...</> : <><Cloud size={12}/> Saved</>}</div></div>
                         </div>
-                        
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left border-collapse">
-                                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b border-slate-100">
-                                        <tr>
-                                            <th className="px-6 py-4 w-40 border-r border-slate-100">Bulan</th>
-                                            <th className="px-6 py-4 w-32 text-center border-r border-slate-100">Plan (Qty)</th>
-                                            <th className="px-6 py-4 min-w-[300px]">Nama Kegiatan</th>
-                                            <th className="px-6 py-4 text-center w-40 bg-emerald-50/20 text-emerald-800 font-bold border-l border-slate-100">Achievement</th>
-                                            <th className="px-6 py-4 w-48 text-center bg-slate-50/50">Control Cek Poin</th>
-                                        </tr>
-                                    </thead>
+                                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b border-slate-100"><tr><th className="px-6 py-4 w-40 border-r border-slate-100">Bulan</th><th className="px-6 py-4 w-32 text-center border-r border-slate-100">Plan (Qty)</th><th className="px-6 py-4 min-w-[300px]">Nama Kegiatan</th><th className="px-6 py-4 text-center w-40 bg-emerald-50/20 text-emerald-800 font-bold border-l border-slate-100">Achievement</th><th className="px-6 py-4 w-48 text-center bg-slate-50/50">Control Cek Poin</th></tr></thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {groups.length === 0 && (
-                                            <tr><td colSpan={5} className="text-center py-8 text-slate-400">Belum ada data project</td></tr>
-                                        )}
+                                        {groups.length === 0 && (<tr><td colSpan={5} className="text-center py-8 text-slate-400">Belum ada data project</td></tr>)}
                                         {groups.map(([month, items]) => {
                                             const planCount = items.length;
                                             const actualCount = items.filter(i => i.completed).length;
                                             const achievement = planCount > 0 ? (actualCount / planCount) * 100 : 0;
-                                            const groupDate = items[0]?.planStart || '2024-01-01'; // Get date for "Add" button context
-                                            const rowSpanCount = planCount + 1; // +1 for the Add Button row
-
+                                            const groupDate = items[0]?.planStart || '2024-01-01';
+                                            const rowSpanCount = planCount + 1;
                                             return (
                                                 <React.Fragment key={month}>
                                                     {items.map((row, index) => {
                                                         return (
                                                             <tr key={row.id} className="hover:bg-slate-50 group">
-                                                                {/* Column 1: Bulan (RowSpan) */}
-                                                                {index === 0 && (
-                                                                    <td rowSpan={rowSpanCount} className="px-6 py-4 align-top font-bold text-slate-700 bg-slate-50/30 border-r border-slate-100">
-                                                                                {month}
-                                                                    </td>
-                                                                )}
-                                                                
-                                                                {/* Column 2: Jumlah Project (RowSpan) */}
-                                                                {index === 0 && (
-                                                                    <td rowSpan={rowSpanCount} className="px-6 py-4 align-top text-center font-bold text-blue-600 bg-slate-50/30 border-r border-slate-100">
-                                                                                {planCount} Project
-                                                                    </td>
-                                                                )}
-
-                                                                {/* Column 3: Nama Kegiatan (Editable) */}
+                                                                {index === 0 && (<td rowSpan={rowSpanCount} className="px-6 py-4 align-top font-bold text-slate-700 bg-slate-50/30 border-r border-slate-100">{month}</td>)}
+                                                                {index === 0 && (<td rowSpan={rowSpanCount} className="px-6 py-4 align-top text-center font-bold text-blue-600 bg-slate-50/30 border-r border-slate-100">{planCount} Project</td>)}
                                                                 <td className="px-6 py-3 align-middle relative">
                                                                         <div className="flex flex-col gap-1">
                                                                                 <input type="text" value={row.projectName} onChange={(e) => handleAccuracyChange(row.id, 'projectName', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-medium text-slate-800 placeholder-slate-300" placeholder="Nama Kegiatan..." />
-                                                                                <div className="flex gap-2 items-center">
-                                                                                    <MapPin size={10} className="text-slate-400"/>
-                                                                                    <select value={row.site} onChange={(e) => handleAccuracyChange(row.id, 'site', e.target.value)} className="bg-transparent rounded px-0 py-0 border-none outline-none text-[10px] text-slate-500 font-semibold w-auto cursor-pointer hover:text-blue-600">
-                                                                                        {siteOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                                                    </select>
-                                                                                    
-                                                                                    {/* Month Picker for moving items */}
-                                                                                    <div className="relative group/date">
-                                                                                        <Calendar size={12} className="text-slate-400 cursor-pointer hover:text-blue-600"/>
-                                                                                        <input 
-                                                                                            type="month" 
-                                                                                            value={row.planStart ? row.planStart.substring(0, 7) : ''} 
-                                                                                            onChange={(e) => handleAccuracyChange(row.id, 'planStart', e.target.value + '-01')} 
-                                                                                            className="absolute inset-0 opacity-0 cursor-pointer" 
-                                                                                            title="Pindah Bulan" 
-                                                                                        />
-                                                                                    </div>
+                                                                                <div className="flex gap-2 items-center"><MapPin size={10} className="text-slate-400"/><select value={row.site} onChange={(e) => handleAccuracyChange(row.id, 'site', e.target.value)} className="bg-transparent rounded px-0 py-0 border-none outline-none text-[10px] text-slate-500 font-semibold w-auto cursor-pointer hover:text-blue-600">{siteOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select>
+                                                                                    <div className="relative group/date"><Calendar size={12} className="text-slate-400 cursor-pointer hover:text-blue-600"/><input type="month" value={row.planStart ? row.planStart.substring(0, 7) : ''} onChange={(e) => handleAccuracyChange(row.id, 'planStart', e.target.value + '-01')} className="absolute inset-0 opacity-0 cursor-pointer" title="Pindah Bulan" /></div>
                                                                                 </div>
                                                                         </div>
                                                                         <button onClick={() => deleteAccuracyRow(row.id)} className="absolute right-2 top-3 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition"><Trash2 size={16}/></button>
                                                                 </td>
-
-                                                                {/* Column 4: Achievement (RowSpan) */}
-                                                                {index === 0 && (
-                                                                    <td rowSpan={rowSpanCount} className="px-6 py-4 align-middle text-center bg-emerald-50/10 border-l border-slate-100">
-                                                                                <div className="flex flex-col items-center justify-center">
-                                                                                    <div className={`text-2xl font-bold ${achievement === 100 ? 'text-emerald-600' : (achievement > 0 ? 'text-blue-600' : 'text-slate-400')}`}>
-                                                                                        {fmt(achievement)}%
-                                                                                    </div>
-                                                                                    <div className="text-[10px] text-slate-400 font-medium mt-1">
-                                                                                        {actualCount} / {planCount} Selesai
-                                                                                    </div>
-                                                                                </div>
-                                                                    </td>
-                                                                )}
-
-                                                                {/* Column 5: Control Cek Poin (Checkbox + Link/Upload) */}
-                                                                <td className="px-6 py-3 align-middle bg-slate-50/20">
-                                                                        <div className="flex flex-col gap-2">
-                                                                                <div className="flex items-center justify-center">
-                                                                                    <button 
-                                                                                        onClick={() => handleAccuracyChange(row.id, 'completed', !row.completed)}
-                                                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all border ${row.completed ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-slate-400 border-slate-300 hover:border-slate-400'}`}
-                                                                                    >
-                                                                                        {row.completed ? <CheckSquare size={14} /> : <Square size={14} />}
-                                                                                        {row.completed ? 'Verified' : 'Unverified'}
-                                                                                    </button>
-                                                                                </div>
-                                                                                
-                                                                                <div className="relative flex items-center">
-                                                                                    <LinkIcon size={12} className="absolute left-2 text-slate-400" />
-                                                                                    <input 
-                                                                                        type="text" 
-                                                                                        value={row.evidence || ''} 
-                                                                                        onChange={(e) => handleAccuracyChange(row.id, 'evidence', e.target.value)} 
-                                                                                        placeholder="Link / Bukti..."
-                                                                                        className="w-full text-[10px] border border-slate-200 rounded-l-md py-1.5 pl-6 pr-1 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all bg-white"
-                                                                                    />
-                                                                                    <button 
-                                                                                        onClick={() => handleRowUploadClick(row.id)}
-                                                                                        className="bg-slate-100 border border-l-0 border-slate-200 rounded-r-md p-1.5 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                                                                                        title="Upload File"
-                                                                                    >
-                                                                                        <Upload size={12} />
-                                                                                    </button>
-                                                                                </div>
-                                                                        </div>
-                                                                </td>
+                                                                {index === 0 && (<td rowSpan={rowSpanCount} className="px-6 py-4 align-middle text-center bg-emerald-50/10 border-l border-slate-100"><div className="flex flex-col items-center justify-center"><div className={`text-2xl font-bold ${achievement === 100 ? 'text-emerald-600' : (achievement > 0 ? 'text-blue-600' : 'text-slate-400')}`}>{fmt(achievement)}%</div><div className="text-[10px] text-slate-400 font-medium mt-1">{actualCount} / {planCount} Selesai</div></div></td>)}
+                                                                <td className="px-6 py-3 align-middle bg-slate-50/20"><div className="flex flex-col gap-2"><div className="flex items-center justify-center"><button onClick={() => handleAccuracyChange(row.id, 'completed', !row.completed)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all border ${row.completed ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-slate-400 border-slate-300 hover:border-slate-400'}`}>{row.completed ? <CheckSquare size={14} /> : <Square size={14} />}{row.completed ? 'Verified' : 'Unverified'}</button></div><div className="relative flex items-center"><LinkIcon size={12} className="absolute left-2 text-slate-400" /><input type="text" value={row.evidence || ''} onChange={(e) => handleAccuracyChange(row.id, 'evidence', e.target.value)} placeholder="Link / Bukti..." className="w-full text-[10px] border border-slate-200 rounded-l-md py-1.5 pl-6 pr-1 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all bg-white"/><button onClick={() => handleRowUploadClick(row.id)} className="bg-slate-100 border border-l-0 border-slate-200 rounded-r-md p-1.5 hover:bg-blue-50 hover:text-blue-600 transition-colors" title="Upload File"><Upload size={12} /></button></div></div></td>
                                                             </tr>
                                                         );
                                                     })}
-                                                    {/* Row Footer for Adding New Item to THIS month */}
                                                     <tr>
-                                                        <td className="px-6 py-2 align-middle border-t border-slate-100">
-                                                            <button 
-                                                                onClick={() => addAccuracyRow(groupDate)}
-                                                                className="w-full flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-blue-600 hover:bg-blue-50 py-1.5 px-3 rounded-lg transition-all border border-dashed border-slate-300 hover:border-blue-300"
-                                                            >
-                                                                <Plus size={14}/> Tambah Kegiatan di {month}
-                                                            </button>
-                                                        </td>
-                                                        {/* Empty Cell for Control Cek Poin column alignment */}
+                                                        <td className="px-6 py-2 align-middle border-t border-slate-100"><button onClick={() => addAccuracyRow(groupDate)} className="w-full flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-blue-600 hover:bg-blue-50 py-1.5 px-3 rounded-lg transition-all border border-dashed border-slate-300 hover:border-blue-300"><Plus size={14}/> Tambah Kegiatan di {month}</button></td>
                                                         <td className="px-6 py-2 align-middle border-t border-slate-100 bg-slate-50/20"></td>
                                                     </tr>
                                                 </React.Fragment>
@@ -940,38 +791,10 @@
                                 </table>
                             </div>
                         </div>
-
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Clock size={20}/></div>
-                                    <h3 className="font-bold text-slate-700">Planned Projects</h3>
-                                </div>
-                                <div className="text-3xl font-bold text-slate-800">
-                                    {accuracyData.length}
-                                </div>
-                                <div className="text-xs text-slate-500 mt-1">Total rencana audit setahun</div>
-                            </div>
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><CheckCircle2 size={20}/></div>
-                                    <h3 className="font-bold text-slate-700">Realized</h3>
-                                </div>
-                                <div className="text-3xl font-bold text-slate-800">
-                                    {accuracyData.filter(r => r.completed).length}
-                                </div>
-                                <div className="text-xs text-slate-500 mt-1">Total project selesai</div>
-                            </div>
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="p-2 bg-purple-100 text-purple-600 rounded-lg"><TrendingUp size={20}/></div>
-                                    <h3 className="font-bold text-slate-700">YTD Achievement</h3>
-                                </div>
-                                <div className="text-3xl font-bold text-slate-800">
-                                    {accuracyData.length > 0 ? fmt((accuracyData.filter(r => r.completed).length / accuracyData.length) * 100) : 0}%
-                                </div>
-                                <div className="text-xs text-slate-500 mt-1">Pencapaian keseluruhan</div>
-                            </div>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Clock size={20}/></div><h3 className="font-bold text-slate-700">Planned Projects</h3></div><div className="text-3xl font-bold text-slate-800">{accuracyData.length}</div><div className="text-xs text-slate-500 mt-1">Total rencana audit setahun</div></div>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><CheckCircle2 size={20}/></div><h3 className="font-bold text-slate-700">Realized</h3></div><div className="text-3xl font-bold text-slate-800">{accuracyData.filter(r => r.completed).length}</div><div className="text-xs text-slate-500 mt-1">Total project selesai</div></div>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-purple-100 text-purple-600 rounded-lg"><TrendingUp size={20}/></div><h3 className="font-bold text-slate-700">YTD Achievement</h3></div><div className="text-3xl font-bold text-slate-800">{accuracyData.length > 0 ? fmt((accuracyData.filter(r => r.completed).length / accuracyData.length) * 100) : 0}%</div><div className="text-xs text-slate-500 mt-1">Pencapaian keseluruhan</div></div>
                         </div>
                     </div>
                 );
@@ -980,7 +803,6 @@
             const renderDashboardView = () => {
                 let totalScore = 0;
                 let totalActivePrograms = 0;
-
                 programs.forEach(prog => {
                 const m = calculateMetrics(prog.activities, GLOBAL_CUT_OFF);
                 if (prog.activities.some(a => getDaysDiff(a.start, a.end) > 0)) {
@@ -988,9 +810,7 @@
                     totalActivePrograms++;
                 }
                 });
-
                 const globalAverage = totalActivePrograms > 0 ? totalScore / totalActivePrograms : 0;
-
                 const getTimelineRange = () => {
                     let minStart = new Date('2099-12-31');
                     let maxEnd = new Date('1970-01-01');
@@ -1014,185 +834,53 @@
 
                 return (
                 <div className="max-w-6xl mx-auto relative pt-6 px-6">
-                {/* AI MODAL */}
-                {showAIModal && (
-                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
-                        <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Sparkles className="text-purple-600" /> AI Audit Planner</h2><button onClick={() => setShowAIModal(false)}><X size={24} /></button></div>
-                        <div className="mb-6"><label className="block text-sm font-semibold text-slate-700 mb-2">Topic?</label><input type="text" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} className="w-full px-4 py-3 rounded-lg border outline-none" autoFocus /></div>
-                        <button onClick={handleGenerateAI} disabled={isGenerating} className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 rounded-lg flex justify-center gap-2">{isGenerating ? <Loader2 className="animate-spin"/> : <Sparkles size={18}/>} Generate</button>
-                    </div>
-                    </div>
-                )}
-
-                {/* CONFIRMATION MODAL */}
-                {confirmModal.isOpen && (
-                    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="bg-amber-50 p-4 border-b border-amber-100 flex items-center gap-3">
-                        <div className="p-2 bg-amber-100 text-amber-600 rounded-full"><AlertTriangle size={20}/></div>
-                        <h3 className="font-bold text-slate-800 text-lg">{confirmModal.title || 'Konfirmasi'}</h3>
-                        </div>
-                        <div className="p-6">
-                        <p className="text-slate-600 text-sm leading-relaxed">{confirmModal.message || 'Apakah Anda yakin ingin melanjutkan tindakan ini?'}</p>
-                        </div>
-                        <div className="p-4 bg-slate-50 flex gap-3 justify-end">
-                        <button onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-lg text-sm transition">Batal</button>
-                        <button 
-                            onClick={handleConfirmAction} 
-                            className={`px-4 py-2 text-white font-bold rounded-lg text-sm shadow-md transition flex items-center gap-2 ${confirmModal.confirmLabel === 'OK' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}
-                        >
-                            {confirmModal.confirmLabel === 'OK' && <Check size={16}/>}
-                            {confirmModal.confirmLabel || 'Ya, Lanjutkan'}
-                        </button>
-                        </div>
-                    </div>
-                    </div>
-                )}
-
-                {/* Hidden File Input for Import */}
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    style={{ display: 'none' }} 
-                    accept=".json" 
-                    onChange={handleImportFile}
-                />
-
-                {/* Hidden File Input for Program Doc Upload */}
-                <input 
-                    type="file" 
-                    ref={programFileInputRef} 
-                    style={{ display: 'none' }} 
-                    onChange={handleProgramFileChange}
-                />
-
+                {showAIModal && (<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6"><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Sparkles className="text-purple-600" /> AI Audit Planner</h2><button onClick={() => setShowAIModal(false)}><X size={24} /></button></div><div className="mb-6"><label className="block text-sm font-semibold text-slate-700 mb-2">Topic?</label><input type="text" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} className="w-full px-4 py-3 rounded-lg border outline-none" autoFocus /></div><button onClick={handleGenerateAI} disabled={isGenerating} className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 rounded-lg flex justify-center gap-2">{isGenerating ? <Loader2 className="animate-spin"/> : <Sparkles size={18}/>} Generate</button></div></div>)}
+                {confirmModal.isOpen && (<div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200"><div className="bg-amber-50 p-4 border-b border-amber-100 flex items-center gap-3"><div className="p-2 bg-amber-100 text-amber-600 rounded-full"><AlertTriangle size={20}/></div><h3 className="font-bold text-slate-800 text-lg">{confirmModal.title || 'Konfirmasi'}</h3></div><div className="p-6"><p className="text-slate-600 text-sm leading-relaxed">{confirmModal.message || 'Apakah Anda yakin ingin melanjutkan tindakan ini?'}</p></div><div className="p-4 bg-slate-50 flex gap-3 justify-end"><button onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-lg text-sm transition">Batal</button><button onClick={handleConfirmAction} className={`px-4 py-2 text-white font-bold rounded-lg text-sm shadow-md transition flex items-center gap-2 ${confirmModal.confirmLabel === 'OK' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}>{confirmModal.confirmLabel === 'OK' && <Check size={16}/>}{confirmModal.confirmLabel || 'Ya, Lanjutkan'}</button></div></div></div>)}
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleImportFile}/>
+                <input type="file" ref={programFileInputRef} style={{ display: 'none' }} onChange={handleProgramFileChange}/>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-3xl font-bold text-slate-800">Audit Dashboard</h1>
-                        </div>
-                        <p className="text-slate-500 flex items-center gap-2 mt-1">
-                            <span className={`text-xs font-bold flex items-center gap-1 ${isSaving ? 'text-orange-500' : 'text-emerald-600'}`}>
-                                {isSaving ? <><RefreshCw size={10} className="animate-spin"/> Syncing...</> : <><Cloud size={10}/> Online & Saved</>}
-                            </span>
-                        </p>
-                    </div>
+                    <div><div className="flex items-center gap-2"><h1 className="text-3xl font-bold text-slate-800">Audit Dashboard</h1></div><p className="text-slate-500 flex items-center gap-2 mt-1"><span className={`text-xs font-bold flex items-center gap-1 ${isSaving ? 'text-orange-500' : 'text-emerald-600'}`}>{isSaving ? <><RefreshCw size={10} className="animate-spin"/> Syncing...</> : <><Cloud size={10}/> Online & Saved</>}</span></p></div>
                     <div className="flex gap-3 items-center flex-wrap">
                         <button onClick={handleLoadTemplate} className="bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-2 font-medium text-xs" title="Reset / Load Default Data"><Database size={16} /> Reset</button>
                         {legacyDataFound && <button onClick={handleRestoreLegacy} className="bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2.5 rounded-lg font-bold animate-pulse flex gap-2"><RefreshCw size={18} /> Restore</button>}
-                        
-                        {/* EXPORT & IMPORT BUTTONS */}
-                        <div className="bg-white border border-slate-300 rounded-lg flex items-center shadow-sm">
-                            <button onClick={handleExport} className="px-3 py-2.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 border-r border-slate-300 transition" title="Download Backup (JSON)"><Download size={16}/></button>
-                            <button onClick={handleImportClick} className="px-3 py-2.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" title="Import Data"><Upload size={16}/></button>
-                        </div>
-                        
-                        <div className="bg-slate-100 p-1 rounded-lg flex items-center">
-                            <button onClick={() => setDashboardLayout('grid')} className={`p-2 rounded-md ${dashboardLayout === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} title="Grid View"><LayoutGrid size={18} /></button>
-                            <button onClick={() => setDashboardLayout('list')} className={`p-2 rounded-md ${dashboardLayout === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} title="List View"><List size={18} /></button>
-                            <button onClick={() => setDashboardLayout('blueprint')} className={`p-2 rounded-md ${dashboardLayout === 'blueprint' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} title="Blueprint"><CalendarRange size={18} /></button>
-                        </div>
+                        <div className="bg-white border border-slate-300 rounded-lg flex items-center shadow-sm"><button onClick={handleExport} className="px-3 py-2.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 border-r border-slate-300 transition" title="Download Backup (JSON)"><Download size={16}/></button><button onClick={handleImportClick} className="px-3 py-2.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition" title="Import Data"><Upload size={16}/></button></div>
+                        <div className="bg-slate-100 p-1 rounded-lg flex items-center"><button onClick={() => setDashboardLayout('grid')} className={`p-2 rounded-md ${dashboardLayout === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} title="Grid View"><LayoutGrid size={18} /></button><button onClick={() => setDashboardLayout('list')} className={`p-2 rounded-md ${dashboardLayout === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} title="List View"><List size={18} /></button><button onClick={() => setDashboardLayout('blueprint')} className={`p-2 rounded-md ${dashboardLayout === 'blueprint' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`} title="Blueprint"><CalendarRange size={18} /></button></div>
                         <button onClick={() => setShowAIModal(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2.5 rounded-lg font-bold flex gap-2"><Sparkles size={18} className="text-yellow-200" /> AI</button>
                         <button onClick={handleCreateProgram} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 font-medium"><FolderPlus size={18} /> New</button>
                     </div>
                 </div>
-
-                <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl p-6 shadow-lg mb-8 text-white flex justify-between relative overflow-hidden">
-                    <div className="relative z-10"><div className="flex items-center gap-2 mb-2 opacity-90"><TrendingUp size={20} /><span className="text-sm font-semibold uppercase">Achievement</span></div><div className="text-5xl font-bold mb-1">{fmt(globalAverage)}%</div><div className="text-blue-100 text-sm">Average score across {totalActivePrograms} active programs</div></div>
-                    <div className="relative z-10 flex items-center justify-center w-24 h-24"><Activity className="text-white opacity-80" size={32} /></div>
-                </div>
-
-                {/* VIEW COMPONENTS */}
+                <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl p-6 shadow-lg mb-8 text-white flex justify-between relative overflow-hidden"><div className="relative z-10"><div className="flex items-center gap-2 mb-2 opacity-90"><TrendingUp size={20} /><span className="text-sm font-semibold uppercase">Achievement</span></div><div className="text-5xl font-bold mb-1">{fmt(globalAverage)}%</div><div className="text-blue-100 text-sm">Average score across {totalActivePrograms} active programs</div></div><div className="relative z-10 flex items-center justify-center w-24 h-24"><Activity className="text-white opacity-80" size={32} /></div></div>
                 {dashboardLayout === 'grid' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {programs.map(prog => {
-                        const m = calculateMetrics(prog.activities, GLOBAL_CUT_OFF);
-                        return (
-                            <div key={prog.id} onClick={() => handleOpenDetail(prog.id)} className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer group relative overflow-hidden">
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteProgram(prog.id); }} className="absolute top-4 right-4 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors z-20" title="Hapus"><Trash2 size={18} /></button>
-                                <div className={`absolute top-0 left-0 w-1.5 h-full ${m.achievement >= 100 ? 'bg-emerald-500' : (m.achievement >= 80 ? 'bg-blue-500' : 'bg-amber-500')}`}></div>
-                                <div className="flex justify-between items-start mb-4 pl-2">
-                                    <div className="pr-8"><h3 className="font-bold text-lg text-slate-800 line-clamp-1">{prog.title}</h3>
-                                    <div className="flex gap-2 mt-2"><span className="text-[10px] font-bold px-2 py-0.5 bg-orange-50 text-orange-600 rounded border border-orange-100 flex gap-1"><MapPin size={10} /> {prog.site}</span><span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded border border-indigo-100 flex gap-1"><User size={10} /> {prog.pic}</span></div></div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 mb-4 pl-2 text-center bg-slate-50 rounded-lg py-3 border border-slate-100">
-                                    <div><div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Plan</div><div className="text-lg font-bold text-blue-600">{m.plannedDays}<span className="text-xs font-normal ml-0.5">d</span></div></div>
-                                    <div className="border-x border-slate-200"><div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Act</div><div className="text-lg font-bold text-emerald-600">{m.actualDays}<span className="text-xs font-normal ml-0.5">d</span></div></div>
-                                    <div><div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Score</div><div className="text-lg font-bold text-purple-600">{fmt(m.achievement)}%</div></div>
-                                </div>
-                                <div className="pl-2">
-                                    <div className="flex justify-between text-xs mb-1 text-slate-400"><span>Efficiency</span><span className={m.achievement >= 100 ? 'text-emerald-600 font-bold' : 'text-amber-500 font-bold'}>{fmt(m.achievement)}%</span></div>
-                                    <div className="w-full bg-slate-100 rounded-full h-2"><div className={`h-2 rounded-full ${m.achievement >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(m.achievement, 100)}%` }}></div></div>
-                                    {m.overdueCount > 0 ? <div className="mt-3 text-xs text-amber-600 flex items-center gap-1 font-medium"><AlertCircle size={12} /> {m.overdueCount}d delay</div> : <div className="mt-3 text-xs text-emerald-600 flex items-center gap-1 font-medium"><CheckCircle2 size={12} /> On Track</div>}
-                                </div>
-                            </div>
-                        )})}
-                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{programs.map(prog => { const m = calculateMetrics(prog.activities, GLOBAL_CUT_OFF); return (
+                            <div key={prog.id} onClick={() => handleOpenDetail(prog.id)} className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer group relative overflow-hidden"><button onClick={(e) => { e.stopPropagation(); handleDeleteProgram(prog.id); }} className="absolute top-4 right-4 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors z-20" title="Hapus"><Trash2 size={18} /></button><div className={`absolute top-0 left-0 w-1.5 h-full ${m.achievement >= 100 ? 'bg-emerald-500' : (m.achievement >= 80 ? 'bg-blue-500' : 'bg-amber-500')}`}></div><div className="flex justify-between items-start mb-4 pl-2"><div className="pr-8"><h3 className="font-bold text-lg text-slate-800 line-clamp-1">{prog.title}</h3><div className="flex gap-2 mt-2"><span className="text-[10px] font-bold px-2 py-0.5 bg-orange-50 text-orange-600 rounded border border-orange-100 flex gap-1"><MapPin size={10} /> {prog.site}</span><span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded border border-indigo-100 flex gap-1"><User size={10} /> {prog.pic}</span></div></div></div><div className="grid grid-cols-3 gap-2 mb-4 pl-2 text-center bg-slate-50 rounded-lg py-3 border border-slate-100"><div><div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Plan</div><div className="text-lg font-bold text-blue-600">{m.plannedDays}<span className="text-xs font-normal ml-0.5">d</span></div></div><div className="border-x border-slate-200"><div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Act</div><div className="text-lg font-bold text-emerald-600">{m.actualDays}<span className="text-xs font-normal ml-0.5">d</span></div></div><div><div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Score</div><div className="text-lg font-bold text-purple-600">{fmt(m.achievement)}%</div></div></div><div className="pl-2"><div className="flex justify-between text-xs mb-1 text-slate-400"><span>Efficiency</span><span className={m.achievement >= 100 ? 'text-emerald-600 font-bold' : 'text-amber-500 font-bold'}>{fmt(m.achievement)}%</span></div><div className="w-full bg-slate-100 rounded-full h-2"><div className={`h-2 rounded-full ${m.achievement >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(m.achievement, 100)}%` }}></div></div>{m.overdueCount > 0 ? <div className="mt-3 text-xs text-amber-600 flex items-center gap-1 font-medium"><AlertCircle size={12} /> {m.overdueCount}d delay</div> : <div className="mt-3 text-xs text-emerald-600 flex items-center gap-1 font-medium"><CheckCircle2 size={12} /> On Track</div>}</div></div>
+                        )})}</div>
                 )}
-
                 {dashboardLayout === 'list' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b border-slate-100"><tr><th className="px-6 py-4">Title</th><th className="px-6 py-4">Site</th><th className="px-6 py-4">PIC</th><th className="px-6 py-4 text-center">Plan</th><th className="px-6 py-4 text-center">Act</th><th className="px-6 py-4 text-center">Score</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Action</th></tr></thead>
-                        <tbody className="divide-y divide-slate-100">{programs.map(prog => { const m = calculateMetrics(prog.activities, GLOBAL_CUT_OFF); return (
-                            <tr key={prog.id} className="hover:bg-slate-50 group"><td className="px-6 py-4 font-bold text-slate-800">{prog.title}</td>
-                            <td className="px-6 py-4"><span className="text-[10px] font-bold px-2 py-0.5 bg-orange-50 text-orange-600 rounded border border-orange-100 inline-flex gap-1"><MapPin size={10}/> {prog.site}</span></td>
-                            <td className="px-6 py-4"><span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded border border-indigo-100 inline-flex gap-1"><User size={10}/> {prog.pic}</span></td>
-                            <td className="px-6 py-4 text-center font-bold text-blue-600">{m.plannedDays}</td><td className="px-6 py-4 text-center font-bold text-emerald-600">{m.actualDays}</td>
-                            <td className="px-6 py-4 text-center"><span className={`font-bold ${m.achievement >= 100 ? 'text-emerald-600' : 'text-purple-600'}`}>{fmt(m.achievement)}%</span></td>
-                            <td className="px-6 py-4">{m.overdueCount > 0 ? <span className="flex items-center gap-1 text-amber-600 font-bold text-xs"><AlertCircle size={14}/> {m.overdueCount}d Delay</span> : <span className="flex items-center gap-1 text-emerald-600 font-bold text-xs"><CheckCircle2 size={14}/> OK</span>}</td>
-                            <td className="px-6 py-4 text-center"><div className="flex justify-center gap-2"><button onClick={() => handleOpenDetail(prog.id)} className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg"><ExternalLink size={18} /></button><button onClick={(e) => { e.stopPropagation(); handleDeleteProgram(prog.id); }} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-colors"><Trash2 size={18} /></button></div></td></tr>
-                        )})}</tbody></table></div>
-                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b border-slate-100"><tr><th className="px-6 py-4">Title</th><th className="px-6 py-4">Site</th><th className="px-6 py-4">PIC</th><th className="px-6 py-4 text-center">Plan</th><th className="px-6 py-4 text-center">Act</th><th className="px-6 py-4 text-center">Score</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{programs.map(prog => { const m = calculateMetrics(prog.activities, GLOBAL_CUT_OFF); return (
+                            <tr key={prog.id} className="hover:bg-slate-50 group"><td className="px-6 py-4 font-bold text-slate-800">{prog.title}</td><td className="px-6 py-4"><span className="text-[10px] font-bold px-2 py-0.5 bg-orange-50 text-orange-600 rounded border border-orange-100 inline-flex gap-1"><MapPin size={10}/> {prog.site}</span></td><td className="px-6 py-4"><span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded border border-indigo-100 inline-flex gap-1"><User size={10}/> {prog.pic}</span></td><td className="px-6 py-4 text-center font-bold text-blue-600">{m.plannedDays}</td><td className="px-6 py-4 text-center font-bold text-emerald-600">{m.actualDays}</td><td className="px-6 py-4 text-center"><span className={`font-bold ${m.achievement >= 100 ? 'text-emerald-600' : 'text-purple-600'}`}>{fmt(m.achievement)}%</span></td><td className="px-6 py-4">{m.overdueCount > 0 ? <span className="flex items-center gap-1 text-amber-600 font-bold text-xs"><AlertCircle size={14}/> {m.overdueCount}d Delay</span> : <span className="flex items-center gap-1 text-emerald-600 font-bold text-xs"><CheckCircle2 size={14}/> OK</span>}</td><td className="px-6 py-4 text-center"><div className="flex justify-center gap-2"><button onClick={() => handleOpenDetail(prog.id)} className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg"><ExternalLink size={18} /></button><button onClick={(e) => { e.stopPropagation(); handleDeleteProgram(prog.id); }} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-colors"><Trash2 size={18} /></button></div></td></tr>
+                        )})}</tbody></table></div></div>
                 )}
-                
                 {dashboardLayout === 'blueprint' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-6">
-                        <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-800">Blueprint</h3><div className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Range: {formatDate(minStart.toISOString())} - {formatDate(maxEnd.toISOString())}</div></div>
-                        <div className="w-full border-b border-slate-200 pb-2 mb-4 flex"><div className="w-48 flex-shrink-0 text-xs font-bold text-slate-400 uppercase">Program</div><div className="flex-1 relative h-6"><div className="absolute left-0 text-xs text-slate-400">{formatDate(minStart.toISOString())}</div><div className="absolute right-0 text-xs text-slate-400">{formatDate(maxEnd.toISOString())}</div><div className="absolute left-1/2 text-xs text-slate-400 -translate-x-1/2">Timeline</div></div></div>
-                        <div className="space-y-6">{programs.map(prog => {
-                            let progStart = new Date('2099-12-31'); let progEnd = new Date('1970-01-01'); let hasAct = false;
-                            prog.activities.forEach(a => { if(a.start && a.end) { hasAct = true; const s = new Date(a.start); const e = new Date(a.end); if(s < progStart) progStart = s; if(e > progEnd) progEnd = e; }});
-                            if (!hasAct) return null;
-                            const totalMs = maxEnd - minStart; const startOffsetMs = progStart - minStart; const durationMs = progEnd - progStart;
-                            const leftPct = Math.max(0, (startOffsetMs / totalMs) * 100); const widthPct = Math.min(100, (durationMs / totalMs) * 100);
-                            return (
-                                <div key={prog.id} className="flex items-center group cursor-pointer" onClick={() => handleOpenDetail(prog.id)}>
-                                    <div className="w-48 flex-shrink-0 pr-4"><div className="font-bold text-sm text-slate-800 truncate">{prog.title}</div><div className="text-[10px] text-slate-400 flex gap-2 mt-1"><span className="flex items-center gap-0.5"><MapPin size={8}/> {prog.site}</span><span className="flex items-center gap-0.5"><User size={8}/> {prog.pic}</span></div></div>
-                                    <div className="flex-1 relative h-8 bg-slate-50 rounded-lg border border-slate-100"><div className="absolute h-5 top-1.5 rounded-md bg-blue-500 shadow-sm hover:bg-blue-600 transition-all cursor-pointer flex items-center px-2 text-[10px] text-white font-bold truncate" style={{ left: `${leftPct}%`, width: `${Math.max(1, widthPct)}%` }}>{widthPct > 10 && <span>{Math.ceil(durationMs / (1000 * 60 * 60 * 24))} days</span>}</div></div>
-                                </div>
-                            );
-                        })}
-                        </div>
-                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-6"><div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-slate-800">Blueprint</h3><div className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Range: {formatDate(minStart.toISOString())} - {formatDate(maxEnd.toISOString())}</div></div><div className="w-full border-b border-slate-200 pb-2 mb-4 flex"><div className="w-48 flex-shrink-0 text-xs font-bold text-slate-400 uppercase">Program</div><div className="flex-1 relative h-6"><div className="absolute left-0 text-xs text-slate-400">{formatDate(minStart.toISOString())}</div><div className="absolute right-0 text-xs text-slate-400">{formatDate(maxEnd.toISOString())}</div><div className="absolute left-1/2 text-xs text-slate-400 -translate-x-1/2">Timeline</div></div></div><div className="space-y-6">{programs.map(prog => { let progStart = new Date('2099-12-31'); let progEnd = new Date('1970-01-01'); let hasAct = false; prog.activities.forEach(a => { if(a.start && a.end) { hasAct = true; const s = new Date(a.start); const e = new Date(a.end); if(s < progStart) progStart = s; if(e > progEnd) progEnd = e; }}); if (!hasAct) return null; const totalMs = maxEnd - minStart; const startOffsetMs = progStart - minStart; const durationMs = progEnd - progStart; const leftPct = Math.max(0, (startOffsetMs / totalMs) * 100); const widthPct = Math.min(100, (durationMs / totalMs) * 100); return (<div key={prog.id} className="flex items-center group cursor-pointer" onClick={() => handleOpenDetail(prog.id)}><div className="w-48 flex-shrink-0 pr-4"><div className="font-bold text-sm text-slate-800 truncate">{prog.title}</div><div className="text-[10px] text-slate-400 flex gap-2 mt-1"><span className="flex items-center gap-0.5"><MapPin size={8}/> {prog.site}</span><span className="flex items-center gap-0.5"><User size={8}/> {prog.pic}</span></div></div><div className="flex-1 relative h-8 bg-slate-50 rounded-lg border border-slate-100"><div className="absolute h-5 top-1.5 rounded-md bg-blue-500 shadow-sm hover:bg-blue-600 transition-all cursor-pointer flex items-center px-2 text-[10px] text-white font-bold truncate" style={{ left: `${leftPct}%`, width: `${Math.max(1, widthPct)}%` }}>{widthPct > 10 && <span>{Math.ceil(durationMs / (1000 * 60 * 60 * 24))} days</span>}</div></div></div>); })}</div></div>
                 )}
-
                 </div>
                 )};
 
             const renderDetailView = () => {
                 const program = programs.find(p => p.id === currentProgramId);
                 if (!program) return <div>Program not found</div>;
-
                 const metrics = calculateMetrics(program.activities, GLOBAL_CUT_OFF);
                 const hasActivities = program.activities.length > 0;
                 const firstDate = hasActivities ? program.activities[0].start : null;
                 const lastDate = hasActivities ? program.activities[program.activities.length - 1].end : null;
-
-                const updateProgram = (field, value) => {
-                const updated = programs.map(p => p.id === currentProgramId ? { ...p, [field]: value } : p);
-                setPrograms(updated);
-                };
-
+                const updateProgram = (field, value) => { const updated = programs.map(p => p.id === currentProgramId ? { ...p, [field]: value } : p); setPrograms(updated); };
                 const updateActivities = (newActivities) => { updateProgram('activities', newActivities); };
-
                 const handleInputChange = (id, field, value) => {
                     let updatedActivities = program.activities.map(a => ({...a}));
                     const index = updatedActivities.findIndex(act => act.id === id);
                     if (index === -1) return;
                     let row = { ...updatedActivities[index], [field]: value };
                     updatedActivities[index] = row; 
-
                     if (field === 'end' && index < updatedActivities.length - 1 && value) updatedActivities[index + 1].start = addDaysToDate(value, 1);
                     if (field === 'start' && value && (!row.end || row.end < value)) row.end = value;
                     if (field === 'actualEnd' && value && index < updatedActivities.length - 1) {
@@ -1203,14 +891,11 @@
                     }
                     if (field === 'actualEnd' && value && !row.end) row.end = value;
                     if (field === 'actualStart' && value && (!row.actualEnd || row.actualEnd < value)) row.actualEnd = value;
-
                     const currentStart = row.actualStart; const currentEnd = row.actualEnd;
                     if (currentStart && currentEnd) { const diff = getDaysDiff(currentStart, currentEnd); row.actualDays = diff > 0 ? diff : 0; } else { row.actualDays = 0; }
-                    
                     updatedActivities[index] = row;
                     updateActivities(updatedActivities);
                 };
-
                 const handleAddActivity = () => {
                     const last = program.activities[program.activities.length - 1];
                     let newStart = new Date().toISOString().split('T')[0];
@@ -1219,178 +904,71 @@
                     if (last && last.actualEnd) { newActualStart = addDaysToDate(last.actualEnd, 1); newActualEnd = newActualStart; newActualDays = 1; }
                     updateActivities([...program.activities, { id: Date.now(), activity: '', category: 'Site Visit', start: newStart, end: newStart, actualStart: newActualStart, actualEnd: newActualEnd, actualDays: newActualDays, link: '' }]);
                 };
-
                 const handleAddUnplanned = () => {
                     const last = program.activities[program.activities.length - 1];
                     let newActualStart = new Date().toISOString().split('T')[0];
                     if (last && last.actualEnd) newActualStart = addDaysToDate(last.actualEnd, 1);
                     updateActivities([...program.activities, { id: Date.now(), activity: 'Unplanned', category: 'Site Visit', start: '', end: '', actualStart: newActualStart, actualEnd: newActualStart, actualDays: 1, link: '' }]);
                 };
-
                 const handleDeleteActivity = (id) => { updateActivities(program.activities.filter(a => a.id !== id)); };
 
                 return (
                 <div className="max-w-screen-2xl mx-auto pt-6 px-6">
-                    <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200">
-                    <button onClick={() => setView('dashboard')} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><ArrowLeft size={24} /></button>
-                    <div className="flex-1">{isEditingTitle ? <input type="text" autoFocus value={program.title} onChange={(e) => updateProgram('title', e.target.value)} onBlur={() => setIsEditingTitle(false)} className="text-2xl font-bold text-slate-900 border-b-2 border-blue-500 outline-none w-full" /> : <h1 onClick={() => setIsEditingTitle(true)} className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-blue-600 flex items-center gap-2 group">{program.title} <Edit2 size={16} className="text-slate-300 opacity-0 group-hover:opacity-100" /></h1>}</div>
-                    <div className="flex items-center gap-3">
-                        <div className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 ${isSaving ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                            {isSaving ? <><RefreshCw size={12} className="animate-spin"/> Saving...</> : <><Cloud size={12}/> Saved</>}
-                        </div>
-                        <button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex gap-2 font-medium"><Save size={18} /> Save</button>
-                        <button onClick={() => handleDeleteProgram(program.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg"><Trash2 size={20} /></button>
-                    </div>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row gap-6 items-end">
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full">
-                            <div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">PIC</label><select value={program.pic} onChange={(e) => updateProgram('pic', e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-md py-2 px-3 text-sm font-semibold">{picOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
-                            <div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Site</label><select value={program.site} onChange={(e) => updateProgram('site', e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-md py-2 px-3 text-sm font-semibold">{siteOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
-                            
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Plan Start</label>
-                                <input type="date" value={firstDate || ''} disabled className="w-full bg-slate-100 border border-slate-300 rounded-md py-2 px-3 text-sm font-bold text-slate-600 mb-1" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Plan End</label>
-                                <input type="date" value={lastDate || ''} disabled className="w-full bg-slate-100 border border-slate-300 rounded-md py-2 px-3 text-sm font-bold text-slate-600 mb-1" />
-                            </div>
-
-                            <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Surat Perintah Audit</label>
-                                    <div className="flex items-center gap-2 h-[42px]">
-                                    <div className="flex-1 relative">
-                                        <LinkIcon size={14} className="absolute left-2 top-2.5 text-slate-400" />
-                                        <input 
-                                            type="text" 
-                                            value={program.docLink || ''} 
-                                            onChange={(e) => updateProgram('docLink', e.target.value)}
-                                            placeholder="Paste Link..."
-                                            className="w-full bg-slate-50 border border-slate-300 rounded-l-md py-2 pl-7 pr-2 text-sm outline-none focus:border-blue-500 h-full"
-                                        />
-                                    </div>
-                                    <button 
-                                        onClick={() => programFileInputRef.current.click()}
-                                        className="bg-white border border-slate-300 border-l-0 rounded-r-md px-3 h-full hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition"
-                                        title="Upload File"
-                                    >
-                                        <Upload size={18} />
-                                    </button>
-                                    </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm relative overflow-hidden"><div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-xl"></div><div className="flex justify-between mb-2"><span className="text-slate-500 text-sm font-medium">Planned Days</span><Calendar className="text-blue-400" size={20} /></div><div className="text-3xl font-bold text-slate-800">{fmt(metrics.plannedDays)} <span className="text-sm font-medium text-slate-400">days</span></div></div>
-                        <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm relative overflow-hidden"><div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 rounded-l-xl"></div><div className="flex justify-between mb-2"><span className="text-slate-500 text-sm font-medium">Actual Days</span><CheckCircle2 className="text-emerald-400" size={20} /></div><div className="text-3xl font-bold text-slate-800">{fmt(metrics.actualDays)} <span className="text-sm font-medium text-slate-400">days</span></div></div>
-                        <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm relative overflow-hidden"><div className="absolute left-0 top-0 bottom-0 w-1.5 bg-purple-500 rounded-l-xl"></div><div className="flex justify-between mb-2"><span className="text-slate-500 text-sm font-medium">Achievement</span><BarChart3 className="text-purple-400" size={20} /></div><div className={`text-3xl font-bold ${metrics.achievement >= 100 ? 'text-emerald-600' : 'text-purple-600'}`}>{fmt(metrics.achievement)}%</div></div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b"><tr><th className="px-4 py-4 w-10">No</th><th className="px-4 py-4 min-w-[200px]">Activity</th><th className="px-4 py-4">Plan Start</th><th className="px-4 py-4">Plan End</th><th className="px-4 py-4 text-center">Plan (D)</th><th className="px-4 py-4 bg-emerald-50/20 text-emerald-800">Act Start</th><th className="px-4 py-4 bg-emerald-50/20 text-emerald-800">Act End</th><th className="px-4 py-4 text-center bg-emerald-50/30 font-bold text-emerald-700">Act (D)</th><th className="px-4 py-4 text-center bg-emerald-50/50 text-emerald-700">Act %</th><th className="px-4 py-4 w-48">Control Cek Point</th><th className="px-2 py-4 w-10"></th></tr></thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {program.activities.map((row, idx) => {
-                            const dur = getDaysDiff(row.start, row.end); let aPct = 0, isOver = false; if(row.actualDays>0 && dur>0){ if(row.actualDays<=dur) aPct=100; else { aPct=(dur/row.actualDays)*100; isOver=true; }} else if(dur===0 && row.actualDays>0) aPct=100;
-                            const isUnplanned = dur === 0;
-                            
-                            return (
-                                <tr key={row.id} className={`hover:bg-slate-50 group ${isUnplanned ? 'bg-amber-50/50' : ''}`}>
-                                    <td className="px-4 py-3 text-slate-400 text-center">{idx + 1}</td>
-                                    <td className="px-4 py-3"><input type="text" value={row.activity} onChange={(e)=>handleInputChange(row.id,'activity',e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-blue-400 outline-none" placeholder="Activity Name..." /></td>
-                                    <td className="px-4 py-3"><input type="date" value={row.start} onChange={(e)=>handleInputChange(row.id,'start',e.target.value)} className="bg-transparent text-xs font-medium outline-none w-24"/></td><td className="px-4 py-3"><input type="date" value={row.end} onChange={(e)=>handleInputChange(row.id,'end',e.target.value)} className="bg-transparent text-xs font-medium outline-none w-24"/></td>
-                                    <td className="px-4 py-3 text-center font-medium">{isUnplanned ? <span className="text-xs text-amber-600 font-bold px-1 bg-amber-100 rounded">UNP</span> : dur}</td>
-                                    <td className="px-4 py-3 bg-emerald-50/10"><input type="date" value={row.actualStart || ''} onChange={(e)=>handleInputChange(row.id,'actualStart',e.target.value)} className="bg-transparent text-xs font-medium outline-none w-24 text-emerald-800"/></td><td className="px-4 py-3 bg-emerald-50/10"><input type="date" value={row.actualEnd || ''} onChange={(e)=>handleInputChange(row.id,'actualEnd',e.target.value)} className="bg-transparent text-xs font-medium outline-none w-24 text-emerald-800"/></td>
-                                    <td className="px-4 py-3 text-center bg-emerald-50/30 font-bold text-emerald-700">{row.actualDays > 0 ? row.actualDays : '-'}</td>
-                                    <td className="px-4 py-3 bg-emerald-50/30 min-w-[100px]"><div className="flex flex-col gap-1"><div className={`flex justify-between text-[10px] font-bold ${isOver?'text-amber-700':'text-emerald-700'}`}><span>{fmt(aPct)}%</span>{isOver && <span>Overdue</span>}</div><div className="w-full bg-slate-200 rounded-full h-1"><div className={`h-1 rounded-full ${isOver?'bg-amber-500':'bg-emerald-500'}`} style={{width:`${Math.min(aPct,100)}%`}}></div></div></div></td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex flex-col">
-                                            <input 
-                                                type="text" 
-                                                value={row.link || ''} 
-                                                onChange={(e)=>handleInputChange(row.id,'link',e.target.value)} 
-                                                className="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-400 outline-none text-xs mb-1" 
-                                                placeholder="Link CCP" 
-                                            />
-                                            {row.link && (
-                                                <a href={row.link.startsWith('http') ? row.link : `https://${row.link}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 text-[10px] flex items-center gap-1 font-medium">
-                                                    <LinkIcon size={10} /> Buka Link
-                                                </a>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-2 py-3 text-center"><button onClick={()=>handleDeleteActivity(row.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition"><Trash2 size={16}/></button></td>
-                                </tr>
-                            )})}
-                            <tr><td colSpan={12} className="px-4 py-3"><div className="flex gap-2"><button onClick={handleAddActivity} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white p-1 rounded shadow-sm flex justify-center gap-1 text-xs font-bold"><Plus size={14}/> Add Planned</button><button onClick={handleAddUnplanned} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white p-1 rounded shadow-sm flex justify-center gap-1 text-xs font-bold"><Zap size={14}/> Add Unplanned</button></div></td></tr>
-                        </tbody>
-                        <tfoot className="bg-slate-50 border-t border-slate-200"><tr><td colSpan={9} className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase">Total Overdue</td><td colSpan={3} className="px-4 py-3">{metrics.overdueCount > 0 ? <span className="flex items-center gap-1 text-amber-600 font-bold text-xs"><AlertCircle size={14}/> +{metrics.overdueCount} Days</span> : <span className="flex items-center gap-1 text-emerald-600 font-bold text-xs"><CheckCircle2 size={14}/> On Time</span>}</td></tr></tfoot></table></div>
-                    </div>
-                </div>
+                    <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-200"><button onClick={() => setView('dashboard')} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><ArrowLeft size={24} /></button><div className="flex-1">{isEditingTitle ? <input type="text" autoFocus value={program.title} onChange={(e) => updateProgram('title', e.target.value)} onBlur={() => setIsEditingTitle(false)} className="text-2xl font-bold text-slate-900 border-b-2 border-blue-500 outline-none w-full" /> : <h1 onClick={() => setIsEditingTitle(true)} className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-blue-600 flex items-center gap-2 group">{program.title} <Edit2 size={16} className="text-slate-300 opacity-0 group-hover:opacity-100" /></h1>}</div><div className="flex items-center gap-3"><div className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 ${isSaving ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>{isSaving ? <><RefreshCw size={12} className="animate-spin"/> Saving...</> : <><Cloud size={12}/> Saved</>}</div><button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex gap-2 font-medium"><Save size={18} /> Save</button><button onClick={() => handleDeleteProgram(program.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg"><Trash2 size={20} /></button></div></div>
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row gap-6 items-end"><div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full"><div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">PIC</label><select value={program.pic} onChange={(e) => updateProgram('pic', e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-md py-2 px-3 text-sm font-semibold">{picOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div><div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Site</label><select value={program.site} onChange={(e) => updateProgram('site', e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-md py-2 px-3 text-sm font-semibold">{siteOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div><div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Plan Start</label><input type="date" value={firstDate || ''} disabled className="w-full bg-slate-100 border border-slate-300 rounded-md py-2 px-3 text-sm font-bold text-slate-600 mb-1" /></div><div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Plan End</label><input type="date" value={lastDate || ''} disabled className="w-full bg-slate-100 border border-slate-300 rounded-md py-2 px-3 text-sm font-bold text-slate-600 mb-1" /></div><div><label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Surat Perintah Audit</label><div className="flex items-center gap-2 h-[42px]"><div className="flex-1 relative"><LinkIcon size={14} className="absolute left-2 top-2.5 text-slate-400" /><input type="text" value={program.docLink || ''} onChange={(e) => updateProgram('docLink', e.target.value)} placeholder="Paste Link..." className="w-full bg-slate-50 border border-slate-300 rounded-l-md py-2 pl-7 pr-2 text-sm outline-none focus:border-blue-500 h-full"/></div><button onClick={() => programFileInputRef.current.click()} className="bg-white border border-slate-300 border-l-0 rounded-r-md px-3 h-full hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition" title="Upload File"><Upload size={18} /></button></div></div></div></div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"><div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm relative overflow-hidden"><div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 rounded-l-xl"></div><div className="flex justify-between mb-2"><span className="text-slate-500 text-sm font-medium">Planned Days</span><Calendar className="text-blue-400" size={20} /></div><div className="text-3xl font-bold text-slate-800">{fmt(metrics.plannedDays)} <span className="text-sm font-medium text-slate-400">days</span></div></div><div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm relative overflow-hidden"><div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 rounded-l-xl"></div><div className="flex justify-between mb-2"><span className="text-slate-500 text-sm font-medium">Actual Days</span><CheckCircle2 className="text-emerald-400" size={20} /></div><div className="text-3xl font-bold text-slate-800">{fmt(metrics.actualDays)} <span className="text-sm font-medium text-slate-400">days</span></div></div><div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm relative overflow-hidden"><div className="absolute left-0 top-0 bottom-0 w-1.5 bg-purple-500 rounded-l-xl"></div><div className="flex justify-between mb-2"><span className="text-slate-500 text-sm font-medium">Achievement</span><BarChart3 className="text-purple-400" size={20} /></div><div className={`text-3xl font-bold ${metrics.achievement >= 100 ? 'text-emerald-600' : 'text-purple-600'}`}>{fmt(metrics.achievement)}%</div></div></div>
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b"><tr><th className="px-4 py-4 w-10">No</th><th className="px-4 py-4 min-w-[200px]">Activity</th><th className="px-4 py-4">Plan Start</th><th className="px-4 py-4">Plan End</th><th className="px-4 py-4 text-center">Plan (D)</th><th className="px-4 py-4 bg-emerald-50/20 text-emerald-800">Act Start</th><th className="px-4 py-4 bg-emerald-50/20 text-emerald-800">Act End</th><th className="px-4 py-4 text-center bg-emerald-50/30 font-bold text-emerald-700">Act (D)</th><th className="px-4 py-4 text-center bg-emerald-50/50 text-emerald-700">Act %</th><th className="px-4 py-4 w-48">Control Cek Point</th><th className="px-2 py-4 w-10"></th></tr></thead><tbody className="divide-y divide-slate-100">{program.activities.map((row, idx) => { const dur = getDaysDiff(row.start, row.end); let aPct = 0, isOver = false; if(row.actualDays>0 && dur>0){ if(row.actualDays<=dur) aPct=100; else { aPct=(dur/row.actualDays)*100; isOver=true; }} else if(dur===0 && row.actualDays>0) aPct=100; const isUnplanned = dur === 0; return (<tr key={row.id} className={`hover:bg-slate-50 group ${isUnplanned ? 'bg-amber-50/50' : ''}`}><td className="px-4 py-3 text-slate-400 text-center">{idx + 1}</td><td className="px-4 py-3"><input type="text" value={row.activity} onChange={(e)=>handleInputChange(row.id,'activity',e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-blue-400 outline-none" placeholder="Activity Name..." /></td><td className="px-4 py-3"><input type="date" value={row.start} onChange={(e)=>handleInputChange(row.id,'start',e.target.value)} className="bg-transparent text-xs font-medium outline-none w-24"/></td><td className="px-4 py-3"><input type="date" value={row.end} onChange={(e)=>handleInputChange(row.id,'end',e.target.value)} className="bg-transparent text-xs font-medium outline-none w-24"/></td><td className="px-4 py-3 text-center font-medium">{isUnplanned ? <span className="text-xs text-amber-600 font-bold px-1 bg-amber-100 rounded">UNP</span> : dur}</td><td className="px-4 py-3 bg-emerald-50/10"><input type="date" value={row.actualStart || ''} onChange={(e)=>handleInputChange(row.id,'actualStart',e.target.value)} className="bg-transparent text-xs font-medium outline-none w-24 text-emerald-800"/></td><td className="px-4 py-3 bg-emerald-50/10"><input type="date" value={row.actualEnd || ''} onChange={(e)=>handleInputChange(row.id,'actualEnd',e.target.value)} className="bg-transparent text-xs font-medium outline-none w-24 text-emerald-800"/></td><td className="px-4 py-3 text-center bg-emerald-50/30 font-bold text-emerald-700">{row.actualDays > 0 ? row.actualDays : '-'}</td><td className="px-4 py-3 bg-emerald-50/30 min-w-[100px]"><div className="flex flex-col gap-1"><div className={`flex justify-between text-[10px] font-bold ${isOver?'text-amber-700':'text-emerald-700'}`}><span>{fmt(aPct)}%</span>{isOver && <span>Overdue</span>}</div><div className="w-full bg-slate-200 rounded-full h-1"><div className={`h-1 rounded-full ${isOver?'bg-amber-500':'bg-emerald-500'}`} style={{width:`${Math.min(aPct,100)}%`}}></div></div></div></td><td className="px-4 py-3"><div className="flex flex-col"><input type="text" value={row.link || ''} onChange={(e)=>handleInputChange(row.id,'link',e.target.value)} className="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-400 outline-none text-xs mb-1" placeholder="Link CCP" />{row.link && (<a href={row.link.startsWith('http') ? row.link : `https://${row.link}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 text-[10px] flex items-center gap-1 font-medium"><LinkIcon size={10} /> Buka Link</a>)}</div></td><td className="px-2 py-3 text-center"><button onClick={()=>handleDeleteActivity(row.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition"><Trash2 size={16}/></button></td></tr>)})}<tr><td colSpan={12} className="px-4 py-3"><div className="flex gap-2"><button onClick={handleAddActivity} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white p-1 rounded shadow-sm flex justify-center gap-1 text-xs font-bold"><Plus size={14}/> Add Planned</button><button onClick={handleAddUnplanned} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white p-1 rounded shadow-sm flex justify-center gap-1 text-xs font-bold"><Zap size={14}/> Add Unplanned</button></div></td></tr></tbody><tfoot className="bg-slate-50 border-t border-slate-200"><tr><td colSpan={9} className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase">Total Overdue</td><td colSpan={3} className="px-4 py-3">{metrics.overdueCount > 0 ? <span className="flex items-center gap-1 text-amber-600 font-bold text-xs"><AlertCircle size={14}/> +{metrics.overdueCount} Days</span> : <span className="flex items-center gap-1 text-emerald-600 font-bold text-xs"><CheckCircle2 size={14}/> On Time</span>}</td></tr></tfoot></table></div></div></div>
                 );
             };
 
-            const renderAuditModule = () => {
-                return view === 'dashboard' ? renderDashboardView() : renderDetailView();
-            };
+            const renderAuditModule = () => { return view === 'dashboard' ? renderDashboardView() : renderDetailView(); };
 
             // --- MAIN RENDER (LAYOUT) ---
+            // Tampilkan layar login jika belum login
+            if (!authInitialized) return <div className="h-screen flex items-center justify-center text-slate-400"><Loader2 className="animate-spin" /></div>;
+            if (!user) return <LoginScreen />;
+
             return (
                 <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
-                    
-                    {/* SIDEBAR */}
                     <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 shadow-xl z-20`}>
                         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                            {isSidebarOpen ? <div className="font-bold text-white text-lg flex items-center gap-2"><Activity className="text-blue-500"/> AuditOS</div> : <div className="mx-auto"><Activity className="text-blue-500"/></div>}
-                            <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1 hover:bg-slate-800 rounded text-slate-500 hover:text-white transition hidden md:block">
-                                {isSidebarOpen ? <ChevronDown className="rotate-90" size={18}/> : <Menu size={18}/>}
-                            </button>
+                            {isSidebarOpen ? (
+                                <div className="font-bold text-white text-lg flex items-center gap-3">
+                                    <img 
+                                        src="logo.jpg" 
+                                        className="w-8 h-8 object-contain bg-white rounded p-0.5" 
+                                        alt="Logo"
+                                        onError={(e) => {e.target.src = "https://placehold.co/32x32?text=A";}} 
+                                    /> 
+                                    Audit System
+                                </div>
+                            ) : (
+                                <div className="mx-auto">
+                                    <img 
+                                        src="logo.jpg" 
+                                        className="w-8 h-8 object-contain bg-white rounded p-0.5" 
+                                        alt="Logo"
+                                        onError={(e) => {e.target.src = "https://placehold.co/32x32?text=A";}}
+                                    />
+                                </div>
+                            )}
+                            <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1 hover:bg-slate-800 rounded text-slate-500 hover:text-white transition hidden md:block"><ChevronDown className="rotate-90" size={18}/> : <Menu size={18}/></button>
                         </div>
-                        
                         <nav className="flex-1 p-4 space-y-2">
-                            <button onClick={() => setActiveMenu('audit')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'audit' ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}>
-                                <Layout size={20} />
-                                {isSidebarOpen && <span className="font-medium">Audit Program</span>}
-                            </button>
-
-                            <button onClick={() => setActiveMenu('analytics')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'analytics' ? 'bg-purple-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}>
-                                <PieChart size={20} />
-                                {isSidebarOpen && <span className="font-medium">Team Analytics</span>}
-                            </button>
-
-                            <button onClick={() => setActiveMenu('accuracy')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'accuracy' ? 'bg-emerald-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}>
-                                <Target size={20} />
-                                {isSidebarOpen && <span className="font-medium">Akurasi Project Audit</span>}
-                            </button>
-
-                            <button onClick={() => setActiveMenu('leadTime')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'leadTime' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}>
-                                <Timer size={20} />
-                                {isSidebarOpen && <span className="font-medium">Lead time audit report</span>}
-                            </button>
-
-                            <button onClick={() => setActiveMenu('settings')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'settings' ? 'bg-slate-700 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}>
-                                <Settings size={20} />
-                                {isSidebarOpen && <span className="font-medium">Settings</span>}
-                            </button>
+                            <button onClick={() => setActiveMenu('audit')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'audit' ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}><Layout size={20} />{isSidebarOpen && <span className="font-medium">Audit Program</span>}</button>
+                            <button onClick={() => setActiveMenu('analytics')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'analytics' ? 'bg-purple-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}><PieChart size={20} />{isSidebarOpen && <span className="font-medium">Team Analytics</span>}</button>
+                            <button onClick={() => setActiveMenu('accuracy')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'accuracy' ? 'bg-emerald-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}><Target size={20} />{isSidebarOpen && <span className="font-medium">Akurasi Project Audit</span>}</button>
+                            <button onClick={() => setActiveMenu('leadTime')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'leadTime' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}><Timer size={20} />{isSidebarOpen && <span className="font-medium">Lead time audit report</span>}</button>
+                            <button onClick={() => setActiveMenu('settings')} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${activeMenu === 'settings' ? 'bg-slate-700 text-white shadow-lg' : 'hover:bg-slate-800 hover:text-white'}`}><Settings size={20} />{isSidebarOpen && <span className="font-medium">Settings</span>}</button>
                         </nav>
-
                         <div className="p-4 border-t border-slate-800">
                             <div className={`flex items-center gap-3 ${!isSidebarOpen && 'justify-center'}`}>
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">
-                                    {user ? 'U' : 'G'}
-                                </div>
-                                {isSidebarOpen && (
-                                    <div className="flex-1 overflow-hidden">
-                                        <div className="text-sm font-bold text-white truncate">User</div>
-                                        <div className="text-xs text-slate-500 truncate">{user ? 'Online' : 'Connecting...'}</div>
-                                    </div>
-                                )}
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">{user.email ? user.email[0].toUpperCase() : 'U'}</div>
+                                {isSidebarOpen && (<div className="flex-1 overflow-hidden"><div className="text-sm font-bold text-white truncate">{user.email ? user.email.split('@')[0] : 'User'}</div><div className="text-xs text-slate-500 truncate">Online</div></div>)}
+                                {isSidebarOpen && <button onClick={handleLogout} className="p-1 hover:text-rose-500 transition" title="Logout"><LogOut size={16}/></button>}
                             </div>
                         </div>
                     </aside>
-
-                    {/* MAIN CONTENT AREA */}
                     <main className="flex-1 overflow-y-auto relative scroll-smooth no-scrollbar">
                         {activeMenu === 'audit' && renderAuditModule()}
                         {activeMenu === 'analytics' && renderAnalyticsModule()}
@@ -1398,7 +976,6 @@
                         {activeMenu === 'leadTime' && renderLeadTimeModule()}
                         {activeMenu === 'settings' && renderSettingsModule()}
                     </main>
-
                 </div>
             );
         };
