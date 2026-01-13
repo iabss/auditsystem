@@ -889,7 +889,7 @@
                 <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleImportFile}/>
                 <input type="file" ref={programFileInputRef} style={{ display: 'none' }} onChange={handleProgramFileChange}/>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div><div className="flex items-center gap-2"><h1 className="text-3xl font-bold text-slate-800">Audit Dashboard</h1></div><p className="text-slate-500 flex items-center gap-2 mt-1"><span className={`text-xs font-bold flex items-center gap-1 ${isSaving ? 'text-orange-500' : 'text-emerald-600'}`}>{isSaving ? <><RefreshCw size={10} className="animate-spin"/> Syncing...</> : <><Cloud size={10}/> Online & Saved</>}</span></p></div>
+                    <div><div className="flex items-center gap-2"><h1 className="text-3xl font-bold text-slate-800">Audit Program</h1></div><p className="text-slate-500 flex items-center gap-2 mt-1"><span className={`text-xs font-bold flex items-center gap-1 ${isSaving ? 'text-orange-500' : 'text-emerald-600'}`}>{isSaving ? <><RefreshCw size={10} className="animate-spin"/> Syncing...</> : <><Cloud size={10}/> Online & Saved</>}</span></p></div>
                     <div className="flex gap-3 items-center flex-wrap">
                         <button onClick={handleLoadTemplate} className="bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-2 font-medium text-xs" title="Reset / Load Default Data"><Database size={16} /> Reset</button>
                         {legacyDataFound && <button onClick={handleRestoreLegacy} className="bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2.5 rounded-lg font-bold animate-pulse flex gap-2"><RefreshCw size={18} /> Restore</button>}
@@ -1035,4 +1035,5 @@
     </script>
 </body>
 </html>
+
 
