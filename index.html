@@ -671,10 +671,27 @@
                             <h3 className="text-xl font-bold text-slate-800 mb-2">Application Settings</h3>
                             <p className="text-slate-500 max-w-md mx-auto mb-6">Versi ini menggunakan "Shared Board" yang persisten.</p>
                             <div className="bg-slate-100 p-4 rounded text-xs font-mono text-left mb-4">
-                                Status: {user ? "Terhubung ke Database" : "Menghubungkan..."} <br/>
-                                Storage: Cloud Firestore (Persisten) <br/>
-                                Role: {isUserAdmin() ? <span className="text-emerald-600 font-bold">Admin (Full Access)</span> : "Viewer (Read Only)"}
+                                <div>Status: {user ? "Terhubung ke Database" : "Menghubungkan..."}</div>
+                                <div>User Email: <strong>{user ? user.email : '-'}</strong></div>
+                                <div>Storage: Cloud Firestore (Persisten)</div>
+                                <div className="mt-2 pt-2 border-t border-slate-200">
+                                    Role: {isUserAdmin() ? <span className="text-emerald-600 font-bold">Admin (Full Access)</span> : <span className="text-slate-500">Viewer (Read Only)</span>}
+                                </div>
                             </div>
+                            
+                            {/* Menampilkan daftar Admin untuk referensi di Preview */}
+                            <div className="mb-6 text-left border border-slate-100 rounded-lg p-4">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Authorized Admins</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {ADMIN_EMAILS.map(email => (
+                                        <span key={email} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200 font-mono">
+                                            {email}
+                                        </span>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-2 italic">*Hanya email di atas yang bisa menghapus data.</p>
+                            </div>
+
                             <button onClick={handleLogout} className="bg-rose-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-rose-700 flex items-center gap-2 mx-auto"><RefreshCw size={18}/> Log Out</button>
                         </div>
                     </div>
