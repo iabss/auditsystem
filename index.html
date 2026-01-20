@@ -305,6 +305,18 @@
             const picOptions = ['Habibie', 'Josua', 'Farhan', 'Majid', 'Rangga', 'Tika'];
             const siteOptions = ['AGM', 'BAYAN', 'CDI', 'MBL MINING', 'MBL HAULING', 'MHU', 'PALARAN', 'SAMARINDA', 'Hauling', 'Head Office', 'MAS', 'MSJ'];
 
+            // --- KONFIGURASI ADMIN ---
+            // Tambahkan email admin di sini
+            const ADMIN_EMAILS = [
+                "admin@audit.system", 
+                "example@gmail.com", // Ganti dengan email Anda
+                "admin@perusahaan.com"
+            ]; 
+
+            const isUserAdmin = () => {
+                return user && ADMIN_EMAILS.includes(user.email);
+            };
+
             const [programs, setPrograms] = useState([]);
             const [accuracyData, setAccuracyData] = useState([]);
 
@@ -541,6 +553,11 @@
             };
 
             const handleDeleteAccuracyFolder = (id) => {
+                // --- PERMISSION CHECK ---
+                if (!isUserAdmin()) {
+                    alert("Akses Ditolak: Hanya admin yang dapat menghapus folder.");
+                    return;
+                }
                 triggerConfirm('delete_accuracy_folder', { id }, 'Hapus Folder', 'Data di dalam folder ini tidak akan terhapus, tetapi folder akan hilang.');
             };
 
@@ -631,7 +648,16 @@
             };
             const handleLoadTemplate = async () => { triggerConfirm('reset_template', {}, 'Reset Data', 'Apakah Anda yakin ingin mereset data ke template awal?'); };
             const handleRestoreLegacy = async () => { if (legacyDataFound) triggerConfirm('restore_legacy', { data: legacyDataFound }, 'Pulihkan Data', 'Ditemukan data lama di browser. Timpa data Cloud dengan ini?'); };
-            const handleDeleteProgram = (id) => { triggerConfirm('delete_program', { id }, 'Hapus Program', 'Apakah Anda yakin ingin menghapus program audit ini secara permanen?'); };
+            
+            const handleDeleteProgram = (id) => { 
+                // --- PERMISSION CHECK ---
+                if (!isUserAdmin()) {
+                    alert("Akses Ditolak: Hanya admin yang dapat menghapus data.");
+                    return;
+                }
+                triggerConfirm('delete_program', { id }, 'Hapus Program', 'Apakah Anda yakin ingin menghapus program audit ini secara permanen?'); 
+            };
+            
             const handleOpenDetail = (id) => { setCurrentProgramId(id); setView('detail'); };
             const handleGenerateAI = async () => { alert("Fitur AI belum diaktifkan di versi Online ini. Silakan tambahkan API Key jika diperlukan."); setShowAIModal(false); };
 
@@ -646,7 +672,8 @@
                             <p className="text-slate-500 max-w-md mx-auto mb-6">Versi ini menggunakan "Shared Board" yang persisten.</p>
                             <div className="bg-slate-100 p-4 rounded text-xs font-mono text-left mb-4">
                                 Status: {user ? "Terhubung ke Database" : "Menghubungkan..."} <br/>
-                                Storage: Cloud Firestore (Persisten)
+                                Storage: Cloud Firestore (Persisten) <br/>
+                                Role: {isUserAdmin() ? <span className="text-emerald-600 font-bold">Admin (Full Access)</span> : "Viewer (Read Only)"}
                             </div>
                             <button onClick={handleLogout} className="bg-rose-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-rose-700 flex items-center gap-2 mx-auto"><RefreshCw size={18}/> Log Out</button>
                         </div>
@@ -708,10 +735,26 @@
                     setAccuracyData(prev => [...prev, newRow]); 
                 };
                 
-                const deleteAccuracyRow = (id) => { setAccuracyData(prev => prev.filter(item => item.id !== id)); };
+                const deleteAccuracyRow = (id) => { 
+                    // --- PERMISSION CHECK ---
+                    if (!isUserAdmin()) {
+                        alert("Akses Ditolak: Hanya admin yang dapat menghapus data.");
+                        return;
+                    }
+                    setAccuracyData(prev => prev.filter(item => item.id !== id)); 
+                };
+                
                 const sortedData = [...displayedData].sort((a, b) => { if (!a.planStart) return 1; if (!b.planStart) return -1; return new Date(a.planStart) - new Date(b.planStart); });
                 const groupedData = sortedData.reduce((acc, item) => { const date = item.planStart ? new Date(item.planStart) : null; const monthKey = date ? date.toLocaleString('id-ID', { month: 'long' }) : 'Belum Dijadwalkan'; if (!acc[monthKey]) acc[monthKey] = []; acc[monthKey].push(item); return acc; }, {});
                 const groups = Object.entries(groupedData);
+
+                // --- FIX: CALCULATE YTD BASED ON PLAN START DATE <= TODAY ---
+                const todayStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+                // Only consider items where planStart is less than or equal to today
+                const ytdData = displayedData.filter(r => r.planStart <= todayStr);
+                const ytdTarget = ytdData.length;
+                const ytdRealized = ytdData.filter(r => r.completed).length;
+                const ytdAchievement = ytdTarget > 0 ? (ytdRealized / ytdTarget) * 100 : 0;
 
                 return (
                     <div className="max-w-7xl mx-auto pt-6 px-6">
@@ -719,7 +762,7 @@
                         <div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-slate-800 mb-2">Akurasi Project Audit</h1><p className="text-slate-500">Achievement dihitung dari realisasi jumlah project per bulan.</p></div><div className="flex items-center gap-3"><div className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 ${isSaving ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>{isSaving ? <><RefreshCw size={12} className="animate-spin"/> Saving...</> : <><Cloud size={12}/> Saved</>}</div></div></div>
                         
                         {/* SUMMARY CARDS */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"><div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Clock size={20}/></div><h3 className="font-bold text-slate-700">Planned Projects</h3></div><div className="text-3xl font-bold text-slate-800">{displayedData.length}</div></div><div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><CheckCircle2 size={20}/></div><h3 className="font-bold text-slate-700">Realized</h3></div><div className="text-3xl font-bold text-slate-800">{displayedData.filter(r => r.completed).length}</div></div><div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-purple-100 text-purple-600 rounded-lg"><TrendingUp size={20}/></div><h3 className="font-bold text-slate-700">YTD Achievement</h3></div><div className="text-3xl font-bold text-slate-800">{displayedData.length > 0 ? fmt((displayedData.filter(r => r.completed).length / displayedData.length) * 100) : 0}%</div></div></div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"><div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Clock size={20}/></div><h3 className="font-bold text-slate-700">Planned Projects</h3></div><div className="text-3xl font-bold text-slate-800">{displayedData.length}</div></div><div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><CheckCircle2 size={20}/></div><h3 className="font-bold text-slate-700">Realized</h3></div><div className="text-3xl font-bold text-slate-800">{displayedData.filter(r => r.completed).length}</div></div><div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-2"><div className="p-2 bg-purple-100 text-purple-600 rounded-lg"><TrendingUp size={20}/></div><h3 className="font-bold text-slate-700">YTD Achievement</h3></div><div className="text-3xl font-bold text-slate-800">{fmt(ytdAchievement)}%</div></div></div>
                         
                         {/* FOLDER NAVIGATION (HORIZONTAL PILLS) */}
                         <div className="mb-6">
@@ -801,7 +844,8 @@
                 let totalActivePrograms = 0;
                 programs.forEach(prog => {
                     const m = calculateMetrics(prog.activities, GLOBAL_CUT_OFF);
-                    if (prog.activities.some(a => getDaysDiff(a.start, a.end) > 0)) {
+                    // FIXED: Only count programs that have actual progress (actualDays > 0)
+                    if (m.actualDays > 0) {
                         totalScore += m.achievement;
                         totalActivePrograms++;
                     }
