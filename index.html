@@ -367,7 +367,7 @@
 
                 try {
                     const db = getFirestore();
-                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'audit-system-v1';
+                    const appId = typeof __app_id !== 'audit-program' ? __app_id : 'audit-system-v1';
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'audit_data', 'shared_board');
 
                     const unsubscribe = onSnapshot(docRef, (docSnap) => {
@@ -420,7 +420,7 @@
                     setIsSaving(true);
                     try {
                         const db = getFirestore();
-                        const appId = typeof __app_id !== 'undefined' ? __app_id : 'audit-system-v1';
+                        const appId = typeof __app_id !== 'audit-program' ? __app_id : 'audit-system-v1';
                         const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'audit_data', 'shared_board');
                         
                         await setDoc(docRef, { 
@@ -624,7 +624,7 @@
                 setIsSaving(true);
                 try {
                     const db = getFirestore();
-                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'audit-system-v1';
+                    const appId = typeof __app_id !== 'audit-program' ? __app_id : 'audit-system-v1';
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'audit_data', 'shared_board');
                     
                     await setDoc(docRef, { 
